@@ -3,10 +3,11 @@
   const { DEFAULTS, QUALITIES, load, save } = window.TTSettings;
   let settings = await load();
 
+  // Same names and order as the comment sort menu on YouTube.
   const SORTS = () => [
-    { id: 'top', label: 'Top comments' },
-    { id: 'newest', label: 'Newest first' },
     ...(settings.popularSort ? [{ id: 'popular', label: 'Most popular' }] : []),
+    { id: 'top', label: 'Top' },
+    { id: 'newest', label: 'Newest' },
   ];
   const OPTIONS = {
     quality: () => QUALITIES.map(q => ({ id: q.id, label: q.label })),

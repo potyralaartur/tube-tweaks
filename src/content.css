@@ -62,23 +62,28 @@ html[tt-mini] #movie_player video.html5-main-video {
 html[tt-mini] #tt-mini-close { display: block; }
 
 /* ---------- "Most popular" comment sort ---------- */
-.tt-sort-item {
+/* Our option sits last in the DOM (YouTube maps positions to its own sort options) but is shown first. */
+ytd-comments #sort-menu tp-yt-paper-listbox:has(> .tt-sort-item) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+ytd-comments #sort-menu tp-yt-paper-listbox > .tt-sort-item { order: -1; }
+/* Only used if YouTube's own item can't be copied. */
+.tt-sort-fallback {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
   min-height: 48px;
-  padding: 0 16px;
+  padding: 8px 16px;
   font-family: Roboto, Arial, sans-serif;
-  font-size: 1.4rem;
-  line-height: 2rem;
-  color: var(--yt-spec-text-primary);
   cursor: pointer;
-  white-space: nowrap;
   outline: none;
 }
-.tt-sort-item:hover,
-.tt-sort-item:focus-visible { background: var(--yt-spec-10-percent-layer, rgba(127, 127, 127, 0.1)); }
-html[tt-popular-active] .tt-sort-item { background: var(--yt-spec-10-percent-layer, rgba(127, 127, 127, 0.1)); }
-html[tt-popular-active] ytd-comments #sort-menu tp-yt-paper-listbox > :not(.tt-sort-item).iron-selected { background: transparent !important; }
+.tt-sort-fallback .tt-sort-title { font-size: 1.4rem; line-height: 2rem; color: var(--yt-spec-text-primary); }
+.tt-sort-fallback .tt-sort-desc { font-size: 1.2rem; line-height: 1.8rem; color: var(--yt-spec-text-secondary); }
+.tt-sort-fallback:hover,
+.tt-sort-fallback:focus-visible,
+.tt-sort-fallback.iron-selected { background: var(--yt-spec-10-percent-layer, rgba(127, 127, 127, 0.1)); }
 html[tt-popular-active] ytd-comments ytd-item-section-renderer #contents {
   display: flex !important;
   flex-direction: column !important;
