@@ -113,11 +113,11 @@
   const isSelected = el => el.classList.contains('iron-selected') || el.getAttribute('aria-selected') === 'true' || !!el.querySelector('.iron-selected, [aria-selected="true"]');
   const clickItem = el => (el.querySelector('tp-yt-paper-item') || el).click();
 
+  // YouTube marks only the listbox child (the <a>); marking the inner paper-item too doubles the grey.
   function markSelected(el, on) {
-    for (const n of [el, ...el.querySelectorAll('tp-yt-paper-item, [role="option"]')]) {
-      n.classList.toggle('iron-selected', on);
-      if (n.hasAttribute('aria-selected') || n === el) n.setAttribute('aria-selected', String(on));
-    }
+    el.classList.toggle('iron-selected', on);
+    el.setAttribute('aria-selected', String(on));
+    for (const n of el.querySelectorAll('.iron-selected')) n.classList.remove('iron-selected');
   }
 
   // `clicked` is the YouTube option the user picked, when that is what turned this off.
@@ -158,10 +158,19 @@
   // Text-bearing leaves of a menu item: [title, description].
   const textLeaves = el => [...el.querySelectorAll('*')].filter(n => !n.children.length && n.textContent.trim());
 
+  // Sets an element's own text without touching its child elements (YouTube's title holds a badge span).
+  function setOwnText(node, text) {
+    const t = [...node.childNodes].find(n => n.nodeType === Node.TEXT_NODE && n.data.trim());
+    if (t) { if (t.data !== text) t.data = text; }
+    else if (!node.children.length) { if (node.textContent !== text) node.textContent = text; }
+    else node.prepend(text);
+  }
   function setItemText(el) {
-    const [title, desc] = textLeaves(el);
-    if (title && title.textContent !== POPULAR_TITLE) title.textContent = POPULAR_TITLE;
-    if (desc && desc.textContent !== POPULAR_DESC) desc.textContent = POPULAR_DESC;
+    let title = el.querySelector('#item-with-badge .item, .item');
+    let desc = el.querySelector('#subtitle, [secondary]');
+    if (!title || !desc) [title, desc] = textLeaves(el);
+    if (title) setOwnText(title, POPULAR_TITLE);
+    if (desc && desc !== title) setOwnText(desc, POPULAR_DESC);
   }
 
   function makeSortItem(menu, listbox) {
@@ -171,7 +180,11 @@
       el = template.cloneNode(true);
       el.removeAttribute('href');
       el.removeAttribute('tt-bound');
+      el.removeAttribute('id');
+      for (const n of el.querySelectorAll('[focused]')) n.removeAttribute('focused');
+      for (const n of el.querySelectorAll('ytd-badge-supported-renderer, .notification')) n.hidden = true;
       markSelected(el, false);
+      setItemText(el);
     } else {
       el = document.createElement('div');
       el.className = 'tt-sort-fallback';
@@ -191,6 +204,28 @@
     el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') choose(e); }, true);
     return el;
   }
+
+  // Picking one of YouTube's options turns ours off. Listening on the document (capture) sees every
+  // click even if YouTube re-renders its items.
+  const nativeOption = target => {
+    const item = target instanceof Element && target.closest('ytd-comments #sort-menu tp-yt-paper-listbox > *');
+    return item && !item.classList.contains('tt-sort-item') ? item : null;
+  };
+  document.addEventListener('click', e => { const n = nativeOption(e.target); if (n && popularActive) setPopular(false, n); }, true);
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const n = nativeOption(e.target); if (n && popularActive) setPopular(false, n);
+  }, true);
+  // When the menu opens, YouTube focuses its own selected option ("Top"), which greys it out.
+  // While ours is the active sort, move that focus to ours.
+  document.addEventListener('focusin', e => {
+    if (!popularActive || !nativeOption(e.target)) return;
+    const listbox = e.target.closest('tp-yt-paper-listbox');
+    if (e.relatedTarget instanceof Node && listbox.contains(e.relatedTarget)) return; // arrow-key navigation
+    const mine = listbox.querySelector(':scope > .tt-sort-item');
+    const target = mine && (mine.querySelector('tp-yt-paper-item') || mine);
+    if (target) setTimeout(() => target.focus({ preventScroll: true }), 0);
+  }, true);
 
   let renderedMenuFor = null;
   function setupComments() {
@@ -219,12 +254,6 @@
     if (!S.popularSort && mine) { mine.remove(); setPopular(false); mine = null; }
     if (mine && !mine.classList.contains('tt-sort-fallback')) setItemText(mine); // YouTube may re-render copied text
 
-    for (const n of nativeItems(listbox)) {
-      if (!n.hasAttribute('tt-bound')) {
-        n.setAttribute('tt-bound', '');
-        n.addEventListener('click', () => { if (popularActive) setPopular(false, n); }, true);
-      }
-    }
 
     if (commentsVid !== vid) {
       commentsVid = vid;
@@ -299,6 +328,7 @@
   function createsStackingContext(cs) {
     return cs.zIndex !== 'auto' || cs.position === 'fixed' || cs.position === 'sticky' || cs.opacity !== '1' ||
       cs.transform !== 'none' || cs.filter !== 'none' || cs.isolation === 'isolate' ||
+      (cs.viewTransitionName && cs.viewTransitionName !== 'none') || (cs.backdropFilter && cs.backdropFilter !== 'none') ||
       /transform|opacity|filter/.test(cs.willChange) || /paint|layout|strict|content/.test(cs.contain);
   }
   function liftAncestors(p, on) {

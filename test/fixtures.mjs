@@ -32,7 +32,7 @@ const thread = (id, likes) => `<ytd-comment-thread-renderer id="${id}"><div id="
 // Same structure as YouTube's yt-dropdown-menu items (Oct 2026).
 const sortItem = (id, title, subtitle, selected) => `<a id="${id}" class="yt-simple-endpoint style-scope yt-dropdown-menu${selected ? ' iron-selected' : ''}" aria-selected="${selected}" tabindex="0">
   <tp-yt-paper-item class="style-scope yt-dropdown-menu" role="option" tabindex="0"><tp-yt-paper-item-body class="style-scope yt-dropdown-menu">
-    <div id="item-with-badge" class="style-scope yt-dropdown-menu"><div class="item style-scope yt-dropdown-menu">${title}</div><ytd-badge-supported-renderer></ytd-badge-supported-renderer></div>
+    <div id="item-with-badge" class="style-scope yt-dropdown-menu"><div class="item style-scope yt-dropdown-menu">${title}<span class="notification" hidden></span></div><ytd-badge-supported-renderer system-icons hidden></ytd-badge-supported-renderer></div>
     <div secondary id="subtitle" class="style-scope yt-dropdown-menu">${subtitle}</div>
   </tp-yt-paper-item-body></tp-yt-paper-item></a>`;
 
@@ -50,7 +50,7 @@ export const watch = `<!doctype html><html><head>${ytcfg}
 body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
 /* Like YouTube: the player's container is its own stacking context and the related videos are positioned. */
 #masthead-container{position:fixed;top:0;left:0;right:0;height:56px;z-index:2020}
-#player-container-outer{position:relative;z-index:0}
+#player-container-outer{position:relative;view-transition-name:player-resize}
 #columns{display:flex} #primary{flex:1} #secondary{width:426px;padding-right:24px}
 .related{position:relative;z-index:1;height:3000px;background:#333}</style></head><body>
 <ytd-app><div id="masthead-container"></div><ytd-watch-flexy>
@@ -75,6 +75,7 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
       <ytd-comments-header-renderer><div id="sort-menu"><tp-yt-paper-listbox>
         ${sortItem('sort-top', 'Top', 'Show featured comments', true)}
         ${sortItem('sort-new', 'Newest', 'Show recent comments, including potential spam', false)}
+        <dom-repeat id="repeat"><template></template></dom-repeat>
       </tp-yt-paper-listbox></div></ytd-comments-header-renderer>
       <ytd-item-section-renderer><div id="contents">
         ${thread('c5', '5')}${thread('c1200', '1.2K')}${thread('c30', '30')}${thread('c0', '')}

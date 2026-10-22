@@ -49,10 +49,10 @@ check('Cinema mode switched on', await w.evaluate(() => document.querySelector('
 const calls = await w.evaluate(() => window.qualityCalls);
 check('Preferred 1080p picks 1080p Premium', JSON.stringify(calls[0]) === JSON.stringify(['hd1080', 'hd1080', 'premium-fmt']), JSON.stringify(calls));
 const sortState = () => w.evaluate(() => {
-  const items = [...document.querySelectorAll('#sort-menu tp-yt-paper-listbox > *')]
+  const items = [...document.querySelectorAll('#sort-menu tp-yt-paper-listbox > a')]
     .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
   return items.map(a => ({
-    text: [...a.querySelectorAll('*')].filter(n => !n.children.length && n.textContent.trim()).map(n => n.textContent.trim()).join(' / '),
+    text: [a.querySelector('.item'), a.querySelector('#subtitle')].map(n => n.textContent.trim()).join(' / '),
     selected: a.classList.contains('iron-selected') && a.getAttribute('aria-selected') === 'true',
   }));
 });
@@ -60,6 +60,10 @@ const selectedText = s => s.filter(i => i.selected).map(i => i.text.split(' / ')
 let sorts = await sortState();
 check('"Most popular" is first, with a description', sorts[0]?.text === 'Most popular / Show comments with the most likes' && sorts.length === 3, JSON.stringify(sorts.map(i => i.text)));
 check('Only "Most popular" is highlighted when it is the active sort', selectedText(sorts) === 'Most popular', selectedText(sorts));
+check('Selected state is only on the menu item, not doubled inside it', await w.evaluate(() => !document.querySelector('#sort-menu .tt-sort-item .iron-selected')));
+await w.evaluate(() => document.querySelector('#sort-top tp-yt-paper-item').focus());
+await w.waitForTimeout(100);
+check('Opening the menu focuses "Most popular", not "Top"', await w.evaluate(() => !!document.activeElement?.closest('.tt-sort-item')));
 const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')]
   .sort((a, b) => (+getComputedStyle(a).order) - (+getComputedStyle(b).order)).map(e => e.id));
 check('Comments ordered by likes (default sort)', JSON.stringify(order) === JSON.stringify(['c1200', 'c30', 'c5', 'c0', 'cont']), JSON.stringify(order));
