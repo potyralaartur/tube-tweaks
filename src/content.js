@@ -353,6 +353,15 @@
     }
   }
 
+  // Sleep timer has no icon when YouTube's menu icons are off, and no aria-label: match its label.
+  const SLEEP_LABELS = new Set(['sleep timer', 'wyłącznik czasowy']);
+  function markSleepTimer() {
+    for (const item of document.querySelectorAll('#movie_player .ytp-settings-menu .ytp-menuitem[aria-haspopup="true"]:not([tt-sleep-timer])')) {
+      const label = item.querySelector('.ytp-menuitem-label');
+      if (label && SLEEP_LABELS.has(label.textContent.trim().toLowerCase())) item.setAttribute('tt-sleep-timer', '');
+    }
+  }
+
   // ---------- Scheduling ----------
   let timer = null;
   function tick() {
@@ -364,6 +373,7 @@
     sortComments();
     updateMini();
     rewriteMenuBadges();
+    markSleepTimer();
   }
   function schedule() { if (!timer) timer = setTimeout(tick, 200); }
 
@@ -384,6 +394,8 @@
     ready = true;
     try { localStorage.setItem('tt-cinema', S.cinemaMode ? '1' : '0'); } catch {}
     if (S.cinemaMode) setWideCookie();
+    root.toggleAttribute('tt-hide-ambient', S.hideAmbient);
+    root.toggleAttribute('tt-hide-sleep-timer', S.hideSleepTimer);
     root.toggleAttribute('tt-hide-shorts', S.hideShorts);
     root.toggleAttribute('tt-hide-low-views', S.hideLowViews);
     root.setAttribute('tt-settings', JSON.stringify(S));

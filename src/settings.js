@@ -5,6 +5,8 @@
   const DEFAULTS = Object.freeze({
     quality: 'hd1080', // YouTube quality id, or 'auto' to leave YouTube alone
     cinemaMode: true,
+    hideAmbient: true, // Ambient mode item in the player's settings menu
+    hideSleepTimer: true, // Sleep timer item in the player's settings menu
     popularSort: true,
     defaultSort: 'popular', // 'top' | 'newest' | 'popular'
     miniPlayer: true,
