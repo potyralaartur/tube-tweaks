@@ -3,7 +3,7 @@
 // Chrome updates and extension updates (and follows the user's Chrome profile).
 (function (root) {
   const DEFAULTS = Object.freeze({
-    quality: 'hd1080', // YouTube quality id, or 'auto' to leave YouTube alone
+    quality: 'hd2160', // YouTube quality id, or 'auto' to leave YouTube alone
     cinemaMode: true,
     hideAmbient: true, // Ambient mode item in the player's settings menu
     hideSleepTimer: true, // Sleep timer item in the player's settings menu

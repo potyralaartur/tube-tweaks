@@ -6,13 +6,13 @@ A Chrome extension that tunes YouTube to your taste. Design: [Figma – YouTube 
 
 | Setting | What it does |
 | --- | --- |
-| Preferred quality | Applies your chosen quality (8K … 360p, or Auto) to every video. If a video doesn't offer it, the next lower quality is used. |
+| Preferred quality | Applies your chosen quality (8K … 360p, or Auto; 2160p (4K) by default) to every video. If a video doesn't offer it, the next lower quality is used. |
 | 1080p Premium (always on) | Whenever 1080p is picked and the video offers **1080p Premium**, Premium is used instead. Needs a YouTube Premium account. |
 | Always use cinema mode | Opens every video in theater view right away (no flash of the default layout). |
 | Hide Ambient mode / Hide Sleep timer | Removes these items from the player's settings (gear) menu. They're recognised by their icons, so it works in any YouTube language. |
 | Add “Most popular” sort | Adds a **Most popular** option to the comment sort menu that orders comments by likes. The pinned comment stays on top. |
 | Default sort | Most popular, Top or Newest, applied whenever comments load. |
-| Mini player while reading comments | When you scroll past the player, the video keeps playing over the column of related videos, at that column's width. The × closes it until you scroll back up. |
+| Mini player while reading comments | When you scroll past the player, the video keeps playing over the column of related videos, at that column's width. The close button (shown with the player controls) hides it until you scroll back up. |
 | Hide Shorts | Removes Shorts shelves and Shorts tiles from Home. |
 | Hide low-view videos | Hides Home videos below a view count (default 1,000), only from channels you're **not** subscribed to. |
 | 2K badge | When a video plays at 1440p, YouTube's “HD” badge on the gear icon and in the quality menu becomes **2K**, drawn in YouTube's own badge style. |

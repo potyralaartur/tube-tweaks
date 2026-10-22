@@ -47,7 +47,15 @@ await w.goto('https://www.youtube.com/watch?v=abc');
 await w.waitForTimeout(2000);
 check('Cinema mode switched on', await w.evaluate(() => document.querySelector('ytd-watch-flexy').hasAttribute('theater')));
 const calls = await w.evaluate(() => window.qualityCalls);
-check('Preferred 1080p picks 1080p Premium', JSON.stringify(calls[0]) === JSON.stringify(['hd1080', 'hd1080', 'premium-fmt']), JSON.stringify(calls));
+check('Default preferred quality is 4K', JSON.stringify(calls[0]?.slice(0, 2)) === '["hd2160","hd2160"]', JSON.stringify(calls));
+const opts = await ctx.newPage();
+const id = await (async () => { await opts.goto('chrome://extensions'); return opts.evaluate(async () => (await chrome.management.getAll()).find(e => e.name === 'Tube Tweaks').id); })();
+await opts.goto(`chrome-extension://${id}/popup/popup.html`);
+const setSettings = patch => opts.evaluate(async p => { const s = await TTSettings.load(); await TTSettings.save({ ...s, ...p }); }, patch);
+await setSettings({ quality: 'hd1080' });
+await w.waitForTimeout(1500);
+const calls1080 = await w.evaluate(() => window.qualityCalls);
+check('Preferred 1080p picks 1080p Premium', JSON.stringify(calls1080.at(-1)) === JSON.stringify(['hd1080', 'hd1080', 'premium-fmt']), JSON.stringify(calls1080));
 const sortState = () => w.evaluate(() => {
   const items = [...document.querySelectorAll('#sort-menu tp-yt-paper-listbox > a')]
     .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
@@ -98,15 +106,30 @@ await w.waitForTimeout(400);
 const wide = await w.evaluate(() => [document.getElementById('movie_player').getBoundingClientRect().width, document.getElementById('secondary-inner').getBoundingClientRect().left, document.getElementById('movie_player').getBoundingClientRect().left].map(Math.round));
 check('Mini player follows the column after a resize', wide[1] === wide[2], JSON.stringify(wide));
 await w.setViewportSize({ width: 1280, height: 720 });
+await w.waitForTimeout(300);
+const close = await w.evaluate(() => {
+  const b = document.getElementById('tt-mini-close');
+  return { inPlayer: !!b?.closest('#movie_player'), icon: !!b?.querySelector('svg path'), text: b?.textContent.trim() };
+});
+check('Close button is a player icon inside the mini player', close.inPlayer && close.icon && close.text === '', JSON.stringify(close));
+await w.bringToFront(); // transitions don't run in background tabs
+await w.mouse.move(5, 5);
+await w.waitForTimeout(200);
+check('Close button is hidden while the mouse is away', await w.evaluate(() => getComputedStyle(document.getElementById('tt-mini-close')).opacity === '0'));
+const pb = await w.evaluate(() => { const r = document.getElementById('movie_player').getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; });
+await w.mouse.move(pb.x, pb.y);
+await w.waitForTimeout(200);
+check('Close button shows when hovering the player', await w.evaluate(() => getComputedStyle(document.getElementById('tt-mini-close')).opacity !== '0'));
+await w.evaluate(() => { window.playerClicks = 0; document.getElementById('movie_player').addEventListener('click', () => window.playerClicks++); });
+await w.click('#tt-mini-close');
+await w.waitForTimeout(300);
+check('Close button closes the mini player without clicking the video', await w.evaluate(() => !document.documentElement.hasAttribute('tt-mini') && window.playerClicks === 0));
 await w.evaluate(() => window.scrollTo(0, 0));
 await w.waitForTimeout(400);
 check('Mini player removed when back at the top', await w.evaluate(() => !document.documentElement.hasAttribute('tt-mini')));
 
 // Switch preferred quality to 1440p through storage, like the popup does
-const opts = await ctx.newPage();
-const id = await (async () => { await opts.goto('chrome://extensions'); return opts.evaluate(async () => (await chrome.management.getAll()).find(e => e.name === 'Tube Tweaks').id); })();
-await opts.goto(`chrome-extension://${id}/popup/popup.html`);
-await opts.evaluate(async () => { const s = await TTSettings.load(); await TTSettings.save({ ...s, quality: 'hd1440' }); });
+await setSettings({ quality: 'hd1440' });
 await w.waitForTimeout(1500);
 const calls2 = await w.evaluate(() => window.qualityCalls);
 check('Changing preferred quality applies to the open video', JSON.stringify(calls2.at(-1)) === JSON.stringify(['hd1440', 'hd1440', null]) || JSON.stringify(calls2.at(-1)) === JSON.stringify(['hd1440', 'hd1440']), JSON.stringify(calls2));
