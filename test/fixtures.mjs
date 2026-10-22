@@ -29,6 +29,13 @@ export const channels = {
 
 const thread = (id, likes) => `<ytd-comment-thread-renderer id="${id}"><div id="comment"><span id="vote-count-middle">${likes}</span></div></ytd-comment-thread-renderer>`;
 
+// Same structure as YouTube's yt-dropdown-menu items (Oct 2026).
+const sortItem = (id, title, subtitle, selected) => `<a id="${id}" class="yt-simple-endpoint style-scope yt-dropdown-menu${selected ? ' iron-selected' : ''}" aria-selected="${selected}" tabindex="0">
+  <tp-yt-paper-item class="style-scope yt-dropdown-menu" role="option" tabindex="0"><tp-yt-paper-item-body class="style-scope yt-dropdown-menu">
+    <div id="item-with-badge" class="style-scope yt-dropdown-menu"><div class="item style-scope yt-dropdown-menu">${title}</div><ytd-badge-supported-renderer></ytd-badge-supported-renderer></div>
+    <div secondary id="subtitle" class="style-scope yt-dropdown-menu">${subtitle}</div>
+  </tp-yt-paper-item-body></tp-yt-paper-item></a>`;
+
 export const watch = `<!doctype html><html><head>${ytcfg}
 <style>
 /* YouTube's own badge rule (www-player.css, Oct 2026) */
@@ -48,8 +55,8 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}</styl
   <div id="below">
     <ytd-comments id="comments">
       <ytd-comments-header-renderer><div id="sort-menu"><tp-yt-paper-listbox>
-        <a class="iron-selected" id="sort-top"><tp-yt-paper-item>Top comments</tp-yt-paper-item></a>
-        <a id="sort-new"><tp-yt-paper-item>Newest first</tp-yt-paper-item></a>
+        ${sortItem('sort-top', 'Top', 'Show featured comments', true)}
+        ${sortItem('sort-new', 'Newest', 'Show recent comments, including potential spam', false)}
       </tp-yt-paper-listbox></div></ytd-comments-header-renderer>
       <ytd-item-section-renderer><div id="contents">
         ${thread('c5', '5')}${thread('c1200', '1.2K')}${thread('c30', '30')}${thread('c0', '')}
@@ -61,9 +68,13 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}</styl
 <script>
   const flexy = document.querySelector('ytd-watch-flexy');
   document.querySelector('.ytp-size-button').addEventListener('click', () => flexy.toggleAttribute('theater'));
-  for (const a of document.querySelectorAll('#sort-menu a')) a.addEventListener('click', () => {
-    document.querySelectorAll('#sort-menu a').forEach(x => x.classList.toggle('iron-selected', x === a));
-    window.sortClicks = (window.sortClicks || []).concat(a.id);
+  // Like iron-selector: the listbox selects whichever of its children was clicked.
+  const listbox = document.querySelector('#sort-menu tp-yt-paper-listbox');
+  listbox.addEventListener('click', e => {
+    const a = [...listbox.children].find(x => x.contains(e.target));
+    if (!a) return;
+    for (const x of listbox.children) { x.classList.toggle('iron-selected', x === a); x.setAttribute('aria-selected', String(x === a)); }
+    window.sortClicks = (window.sortClicks || []).concat(a.id || a.className);
   });
   const p = document.getElementById('movie_player');
   window.qualityCalls = [];

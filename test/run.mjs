@@ -48,7 +48,18 @@ await w.waitForTimeout(2000);
 check('Cinema mode switched on', await w.evaluate(() => document.querySelector('ytd-watch-flexy').hasAttribute('theater')));
 const calls = await w.evaluate(() => window.qualityCalls);
 check('Preferred 1080p picks 1080p Premium', JSON.stringify(calls[0]) === JSON.stringify(['hd1080', 'hd1080', 'premium-fmt']), JSON.stringify(calls));
-check('"Most popular" added to sort menu', await w.evaluate(() => !!document.querySelector('#sort-menu .tt-sort-item')));
+const sortState = () => w.evaluate(() => {
+  const items = [...document.querySelectorAll('#sort-menu tp-yt-paper-listbox > *')]
+    .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+  return items.map(a => ({
+    text: [...a.querySelectorAll('*')].filter(n => !n.children.length && n.textContent.trim()).map(n => n.textContent.trim()).join(' / '),
+    selected: a.classList.contains('iron-selected') && a.getAttribute('aria-selected') === 'true',
+  }));
+});
+const selectedText = s => s.filter(i => i.selected).map(i => i.text.split(' / ')[0]).join(',');
+let sorts = await sortState();
+check('"Most popular" is first, with a description', sorts[0]?.text === 'Most popular / Show comments with the most likes' && sorts.length === 3, JSON.stringify(sorts.map(i => i.text)));
+check('Only "Most popular" is highlighted when it is the active sort', selectedText(sorts) === 'Most popular', selectedText(sorts));
 const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')]
   .sort((a, b) => (+getComputedStyle(a).order) - (+getComputedStyle(b).order)).map(e => e.id));
 check('Comments ordered by likes (default sort)', JSON.stringify(order) === JSON.stringify(['c1200', 'c30', 'c5', 'c0', 'cont']), JSON.stringify(order));
@@ -56,6 +67,14 @@ await w.click('#sort-new');
 await w.waitForTimeout(400);
 const after = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].map(e => e.style.order).join(','));
 check('Choosing a YouTube sort turns Most popular off', after.replace(/,/g, '') === '', after);
+check('Picking Newest highlights only Newest', selectedText(await sortState()) === 'Newest', selectedText(await sortState()));
+await w.click('#sort-menu .tt-sort-item');
+await w.waitForTimeout(400);
+sorts = await sortState();
+check('Picking Most popular again highlights only it', selectedText(sorts) === 'Most popular', selectedText(sorts));
+await w.click('#sort-top');
+await w.waitForTimeout(400);
+check('Picking Top highlights only Top', selectedText(await sortState()) === 'Top', selectedText(await sortState()));
 await w.evaluate(() => window.scrollTo(0, 1500));
 await w.waitForTimeout(400);
 check('Mini player shown when scrolled to comments', await w.evaluate(() => document.documentElement.hasAttribute('tt-mini') && getComputedStyle(document.getElementById('movie_player')).position === 'fixed'));

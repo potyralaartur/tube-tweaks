@@ -102,18 +102,40 @@
   }
 
   // ---------- Comments: "Most popular" sort and default sort ----------
-  let commentsVid = null, popularActive = false;
+  // The option is a copy of YouTube's own "Top" item, so it gets YouTube's typography and
+  // hover/focus/selected styles. It is appended last (YouTube maps menu positions to its own
+  // sort options) and shown first with CSS order.
+  const POPULAR_TITLE = 'Most popular';
+  const POPULAR_DESC = 'Show comments with the most likes';
+  let commentsVid = null, popularActive = false, strippedSelection = null;
 
   const nativeItems = listbox => [...listbox.children].filter(e => !e.classList.contains('tt-sort-item') && e.matches('a, tp-yt-paper-item, [role="option"]'));
   const isSelected = el => el.classList.contains('iron-selected') || el.getAttribute('aria-selected') === 'true' || !!el.querySelector('.iron-selected, [aria-selected="true"]');
   const clickItem = el => (el.querySelector('tp-yt-paper-item') || el).click();
 
-  function setPopular(on) {
+  function markSelected(el, on) {
+    for (const n of [el, ...el.querySelectorAll('tp-yt-paper-item, [role="option"]')]) {
+      n.classList.toggle('iron-selected', on);
+      if (n.hasAttribute('aria-selected') || n === el) n.setAttribute('aria-selected', String(on));
+    }
+  }
+
+  // `clicked` is the YouTube option the user picked, when that is what turned this off.
+  function setPopular(on, clicked) {
     popularActive = on;
     root.toggleAttribute('tt-popular-active', on);
-    const item = document.querySelector('.tt-sort-item');
-    if (item) item.setAttribute('aria-selected', String(on));
-    if (!on) for (const t of document.querySelectorAll('ytd-comments ytd-item-section-renderer #contents > *')) t.style.order = '';
+    const mine = document.querySelector('ytd-comments #sort-menu .tt-sort-item');
+    if (mine) markSelected(mine, on);
+    if (on && mine && !strippedSelection) {
+      const sel = nativeItems(mine.parentElement).find(isSelected);
+      if (sel) { markSelected(sel, false); strippedSelection = sel; }
+    }
+    if (!on) {
+      // Give the highlight back to "Top" unless the user just picked a different option.
+      if (strippedSelection && (!clicked || clicked === strippedSelection)) markSelected(strippedSelection, true);
+      strippedSelection = null;
+      for (const t of document.querySelectorAll('ytd-comments ytd-item-section-renderer #contents > *')) t.style.order = '';
+    }
   }
 
   function closeDropdown(menu) {
@@ -124,23 +146,45 @@
     }, 60);
   }
 
-  function activatePopular(menu, listbox) {
-    const items = nativeItems(listbox);
-    if (items[0] && !isSelected(items[0])) clickItem(items[0]); // most popular ranks the "Top" set
-    setPopular(true);
+  function activatePopular(listbox) {
+    if (!popularActive) {
+      const items = nativeItems(listbox);
+      if (items[0] && !isSelected(items[0])) clickItem(items[0]); // most popular ranks the "Top" set
+      setPopular(true);
+    }
     sortComments();
   }
 
+  // Text-bearing leaves of a menu item: [title, description].
+  const textLeaves = el => [...el.querySelectorAll('*')].filter(n => !n.children.length && n.textContent.trim());
+
+  function setItemText(el) {
+    const [title, desc] = textLeaves(el);
+    if (title && title.textContent !== POPULAR_TITLE) title.textContent = POPULAR_TITLE;
+    if (desc && desc.textContent !== POPULAR_DESC) desc.textContent = POPULAR_DESC;
+  }
+
   function makeSortItem(menu, listbox) {
-    const el = document.createElement('div');
-    el.className = 'tt-sort-item';
-    el.setAttribute('role', 'option');
+    const template = nativeItems(listbox)[0];
+    let el;
+    if (template && textLeaves(template).length) {
+      el = template.cloneNode(true);
+      el.removeAttribute('href');
+      el.removeAttribute('tt-bound');
+      markSelected(el, false);
+    } else {
+      el = document.createElement('div');
+      el.className = 'tt-sort-fallback';
+      el.setAttribute('role', 'option');
+      el.innerHTML = '<span class="tt-sort-title"></span><span class="tt-sort-desc"></span>';
+      el.firstChild.textContent = POPULAR_TITLE;
+      el.lastChild.textContent = POPULAR_DESC;
+    }
+    el.classList.add('tt-sort-item');
     el.setAttribute('tabindex', '0');
-    el.setAttribute('aria-selected', String(popularActive));
-    el.textContent = 'Most popular';
     const choose = e => {
       e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-      activatePopular(menu, listbox);
+      activatePopular(listbox);
       closeDropdown(menu);
     };
     el.addEventListener('click', choose, true);
@@ -167,13 +211,18 @@
     }
 
     let mine = listbox.querySelector('.tt-sort-item');
-    if (S.popularSort && !mine) listbox.appendChild(makeSortItem(menu, listbox));
-    if (!S.popularSort && mine) { mine.remove(); setPopular(false); }
+    if (S.popularSort && !mine) {
+      mine = makeSortItem(menu, listbox);
+      listbox.appendChild(mine);
+      if (popularActive) setPopular(true);
+    }
+    if (!S.popularSort && mine) { mine.remove(); setPopular(false); mine = null; }
+    if (mine && !mine.classList.contains('tt-sort-fallback')) setItemText(mine); // YouTube may re-render copied text
 
     for (const n of nativeItems(listbox)) {
       if (!n.hasAttribute('tt-bound')) {
         n.setAttribute('tt-bound', '');
-        n.addEventListener('click', () => setPopular(false), true);
+        n.addEventListener('click', () => { if (popularActive) setPopular(false, n); }, true);
       }
     }
 
@@ -182,7 +231,7 @@
       setPopular(false);
       const items = nativeItems(listbox);
       if (S.defaultSort === 'newest' && !isSelected(items[1])) clickItem(items[1]);
-      else if (S.defaultSort === 'popular' && S.popularSort) activatePopular(menu, listbox);
+      else if (S.defaultSort === 'popular' && S.popularSort) activatePopular(listbox);
     }
   }
 
