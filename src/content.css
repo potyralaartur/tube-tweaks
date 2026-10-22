@@ -74,6 +74,9 @@ html[tt-mini] #movie_player video.html5-main-video {
 }
 #tt-mini-close:hover { background: rgba(0, 0, 0, 0.85); }
 html[tt-mini] #tt-mini-close { display: block; }
+/* YouTube gives these a view-transition-name (a stacking context) in theater and default layouts. */
+html[tt-mini] ytd-watch-flexy #player-full-bleed-container,
+html[tt-mini] ytd-watch-flexy #player-container,
 html[tt-mini] [tt-mini-lift] { z-index: var(--tt-mini-lift, 2019) !important; }
 html[tt-mini] [tt-mini-lift="static"] { position: relative !important; }
 
