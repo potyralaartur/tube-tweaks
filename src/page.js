@@ -204,6 +204,14 @@
     return result;
   }
 
+  // Close the comment sort dropdown the way YouTube does (iron-dropdown.close()).
+  document.addEventListener('tt-close-sort-menu', () => {
+    const menu = document.querySelector('ytd-comments #sort-menu');
+    const dropdown = menu && menu.querySelector('tp-yt-iron-dropdown');
+    if (dropdown && typeof dropdown.close === 'function') dropdown.close();
+    else if (menu) menu.querySelector('tp-yt-paper-button, #trigger, #label')?.click();
+  });
+
   document.addEventListener('tt-request-subs', () => {
     if (!subsPromise) subsPromise = fetchSubscriptions().finally(() => setTimeout(() => { subsPromise = null; }, 60000));
     subsPromise.then(subs => {

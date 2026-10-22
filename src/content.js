@@ -138,13 +138,8 @@
     }
   }
 
-  function closeDropdown(menu) {
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
-    setTimeout(() => {
-      const listbox = menu.querySelector('tp-yt-paper-listbox');
-      if (listbox && listbox.offsetParent) menu.querySelector('#trigger, tp-yt-paper-button, #label')?.click();
-    }, 60);
-  }
+  // The page script closes YouTube's dropdown through its own API (a synthetic Escape made the page jump).
+  function closeDropdown() { document.dispatchEvent(new CustomEvent('tt-close-sort-menu')); }
 
   function activatePopular(listbox) {
     if (!popularActive) {
@@ -195,13 +190,6 @@
     }
     el.classList.add('tt-sort-item');
     el.setAttribute('tabindex', '0');
-    const choose = e => {
-      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
-      activatePopular(listbox);
-      closeDropdown(menu);
-    };
-    el.addEventListener('click', choose, true);
-    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') choose(e); }, true);
     return el;
   }
 
@@ -211,20 +199,33 @@
     const item = target instanceof Element && target.closest('ytd-comments #sort-menu tp-yt-paper-listbox > *');
     return item && !item.classList.contains('tt-sort-item') ? item : null;
   };
-  document.addEventListener('click', e => { const n = nativeOption(e.target); if (n && popularActive) setPopular(false, n); }, true);
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    const n = nativeOption(e.target); if (n && popularActive) setPopular(false, n);
-  }, true);
+  // Our listeners on the document are registered at document_start, before YouTube's, so a click on
+  // our item can be kept away from YouTube's own link and menu handlers entirely.
+  function onActivate(e) {
+    if (!(e.target instanceof Element)) return;
+    const mine = e.target.closest('ytd-comments #sort-menu .tt-sort-item');
+    if (mine) {
+      e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation();
+      activatePopular(mine.parentElement);
+      closeDropdown();
+      return;
+    }
+    const n = nativeOption(e.target);
+    if (n && popularActive) setPopular(false, n);
+  }
+  document.addEventListener('click', onActivate, true);
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') onActivate(e); }, true);
   // When the menu opens, YouTube focuses its own selected option ("Top"), which greys it out.
   // While ours is the active sort, move that focus to ours.
   document.addEventListener('focusin', e => {
     if (!popularActive || !nativeOption(e.target)) return;
     const listbox = e.target.closest('tp-yt-paper-listbox');
-    if (e.relatedTarget instanceof Node && listbox.contains(e.relatedTarget)) return; // arrow-key navigation
+    // Arrow-key navigation moves focus between items; opening the menu comes from the listbox itself.
+    const from = e.relatedTarget instanceof Element && e.relatedTarget.closest('tp-yt-paper-listbox > *');
+    if (from && from !== nativeOption(e.target) && listbox.contains(from)) return;
     const mine = listbox.querySelector(':scope > .tt-sort-item');
     const target = mine && (mine.querySelector('tp-yt-paper-item') || mine);
-    if (target) setTimeout(() => target.focus({ preventScroll: true }), 0);
+    if (target) { target.focus({ preventScroll: true }); setTimeout(() => { if (popularActive && listbox.contains(document.activeElement) && !mine.contains(document.activeElement)) target.focus({ preventScroll: true }); }, 0); }
   }, true);
 
   let renderedMenuFor = null;
