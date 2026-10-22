@@ -41,8 +41,13 @@ export const watch = `<!doctype html><html><head>${ytcfg}
 /* YouTube's own badge rule (www-player.css, Oct 2026) */
 .ytp-settings-button{position:relative;width:48px;height:40px}
 .ytp-settings-button.ytp-hd-quality-badge:after{content:"";position:absolute;top:10px;right:5px;height:9px;width:13px;background-color:var(--yt-sys-color-baseline--red-indicator,#e1002d);border-radius:1px;line-height:normal}
-body{margin:0} #player-container-outer{height:400px} #below{height:3000px}</style></head><body>
-<ytd-app><ytd-watch-flexy>
+body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
+/* Like YouTube: the player's container is its own stacking context and the related videos are positioned. */
+#masthead-container{position:fixed;top:0;left:0;right:0;height:56px;z-index:2020}
+#player-container-outer{position:relative;z-index:0}
+#columns{display:flex} #primary{flex:1} #secondary{width:426px;padding-right:24px}
+.related{position:relative;z-index:1;height:3000px;background:#333}</style></head><body>
+<ytd-app><div id="masthead-container"></div><ytd-watch-flexy>
   <div id="player-container-outer"><div id="movie_player" class="html5-video-player">
     <video class="html5-main-video"></video>
     <button class="ytp-size-button"></button>
@@ -52,7 +57,7 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}</styl
       <div class="ytp-menuitem" role="menuitemradio"><div class="ytp-menuitem-label"><div><span>1080p60 HDR <sup class="ytp-swatch-color-white">HD</sup></span></div></div></div>
     </div></div>
   </div></div>
-  <div id="below">
+  <div id="columns"><div id="primary"><div id="below">
     <ytd-comments id="comments">
       <ytd-comments-header-renderer><div id="sort-menu"><tp-yt-paper-listbox>
         ${sortItem('sort-top', 'Top', 'Show featured comments', true)}
@@ -63,7 +68,8 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}</styl
         <ytd-continuation-item-renderer id="cont"></ytd-continuation-item-renderer>
       </div></ytd-item-section-renderer>
     </ytd-comments>
-  </div>
+  </div></div>
+  <div id="secondary"><div id="secondary-inner"><div class="related">Related videos</div></div></div></div>
 </ytd-watch-flexy></ytd-app>
 <script>
   const flexy = document.querySelector('ytd-watch-flexy');
