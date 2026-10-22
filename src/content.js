@@ -292,18 +292,26 @@
   // ---------- Mini player while reading comments ----------
   let miniOn = false, miniDismissed = false;
 
-  function closeButton() {
+  // A player-style icon button inside the player, shown and hidden with YouTube's own controls.
+  // Drawn like YouTube's player icons: a white path over a faint dark outline (ytp-svg-shadow).
+  const CLOSE_ICON = '<svg height="100%" viewBox="0 0 24 24" width="100%" aria-hidden="true">' +
+    '<path class="tt-svg-shadow" d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>' +
+    '<path class="tt-svg-fill" d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+  function closeButton(player) {
     let b = document.getElementById('tt-mini-close');
-    if (!b && document.body) {
+    if (!b) {
       b = document.createElement('button');
       b.id = 'tt-mini-close';
       b.type = 'button';
+      b.className = 'ytp-button';
       b.title = 'Close mini player';
       b.setAttribute('aria-label', 'Close mini player');
-      b.textContent = '×';
-      b.addEventListener('click', () => { miniDismissed = true; updateMini(); });
-      document.body.appendChild(b);
+      b.innerHTML = CLOSE_ICON;
+      // Keep the player from treating these as clicks on the video (play/pause, fullscreen).
+      for (const type of ['mousedown', 'mouseup', 'pointerdown', 'pointerup', 'dblclick']) b.addEventListener(type, e => e.stopPropagation());
+      b.addEventListener('click', e => { e.stopPropagation(); miniDismissed = true; updateMini(); });
     }
+    if (b.parentElement !== player) player.appendChild(b);
   }
 
   // The mini player sits over the secondary column and takes its width (16:9 box).
@@ -362,7 +370,7 @@
     if (!anchor) { setMini(false); return; }
     const out = anchor.getBoundingClientRect().bottom < 120;
     if (!out) miniDismissed = false;
-    if (out && !miniDismissed) closeButton();
+    if (out && !miniDismissed) closeButton(p);
     setMini(out && !miniDismissed);
   }
 

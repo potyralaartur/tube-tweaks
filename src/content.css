@@ -58,22 +58,26 @@ html[tt-mini] #movie_player video.html5-main-video {
 }
 #tt-mini-close {
   display: none;
-  position: fixed;
-  left: calc(var(--tt-mini-left, calc(100vw - 416px)) + var(--tt-mini-w, 400px) - 40px);
-  bottom: calc(16px + var(--tt-mini-w, 400px) * 9 / 16 - 40px);
-  z-index: 2301;
-  width: 32px;
-  height: 32px;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 70; /* above the player's top and bottom chrome */
+  width: 40px;
+  height: 40px;
+  padding: 8px;
   border: 0;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  color: #fff;
-  font: 400 20px/32px Roboto, Arial, sans-serif;
+  background: none;
   cursor: pointer;
-  padding: 0;
+  opacity: 0.9;
+  transition: opacity 0.1s cubic-bezier(0.4, 0, 1, 1);
 }
-#tt-mini-close:hover { background: rgba(0, 0, 0, 0.85); }
-html[tt-mini] #tt-mini-close { display: block; }
+#tt-mini-close:hover, #tt-mini-close:focus-visible { opacity: 1; }
+#tt-mini-close .tt-svg-fill { fill: #fff; }
+#tt-mini-close .tt-svg-shadow { fill: none; stroke: #000; stroke-opacity: 0.15; stroke-width: 2px; }
+/* Hidden with the rest of the controls while the video plays and the mouse is idle or away. */
+#movie_player.ytp-autohide #tt-mini-close,
+#movie_player:not(:hover) #tt-mini-close:not(:focus-visible) { opacity: 0; }
+html[tt-mini] #movie_player #tt-mini-close { display: block; }
 /* YouTube gives these a view-transition-name (a stacking context) in theater and default layouts. */
 html[tt-mini] ytd-watch-flexy #player-full-bleed-container,
 html[tt-mini] ytd-watch-flexy #player-container,
