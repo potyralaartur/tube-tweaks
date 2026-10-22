@@ -78,6 +78,19 @@ check('Picking Top highlights only Top', selectedText(await sortState()) === 'To
 await w.evaluate(() => window.scrollTo(0, 1500));
 await w.waitForTimeout(400);
 check('Mini player shown when scrolled to comments', await w.evaluate(() => document.documentElement.hasAttribute('tt-mini') && getComputedStyle(document.getElementById('movie_player')).position === 'fixed'));
+const mini = await w.evaluate(() => {
+  const p = document.getElementById('movie_player').getBoundingClientRect();
+  const col = document.getElementById('secondary-inner').getBoundingClientRect();
+  const hit = document.elementFromPoint(p.left + p.width / 2, p.top + p.height / 2);
+  return { p: [p.left, p.width, p.height].map(Math.round), col: [col.left, col.width].map(Math.round), onTop: !!hit?.closest('#movie_player') };
+});
+check('Mini player matches the secondary column width, 16:9', mini.p[0] === mini.col[0] && mini.p[1] === mini.col[1] && Math.abs(mini.p[2] - mini.col[1] * 9 / 16) < 1, JSON.stringify(mini));
+check('Mini player is drawn above the secondary column', mini.onTop);
+await w.setViewportSize({ width: 1600, height: 900 });
+await w.waitForTimeout(400);
+const wide = await w.evaluate(() => [document.getElementById('movie_player').getBoundingClientRect().width, document.getElementById('secondary-inner').getBoundingClientRect().left, document.getElementById('movie_player').getBoundingClientRect().left].map(Math.round));
+check('Mini player follows the column after a resize', wide[1] === wide[2], JSON.stringify(wide));
+await w.setViewportSize({ width: 1280, height: 720 });
 await w.evaluate(() => window.scrollTo(0, 0));
 await w.waitForTimeout(400);
 check('Mini player removed when back at the top', await w.evaluate(() => !document.documentElement.hasAttribute('tt-mini')));

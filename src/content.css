@@ -22,12 +22,12 @@ html[tt-hide-low-views] ytd-browse[page-subtype="home"] ytd-rich-item-renderer[t
 /* ---------- Mini player while reading comments ---------- */
 html[tt-mini] #movie_player {
   position: fixed !important;
-  right: 16px !important;
+  left: var(--tt-mini-left, calc(100vw - 416px)) !important;
   bottom: 16px !important;
-  left: auto !important;
+  right: auto !important;
   top: auto !important;
-  width: 400px !important;
-  height: 225px !important;
+  width: var(--tt-mini-w, 400px) !important;
+  height: calc(var(--tt-mini-w, 400px) * 9 / 16) !important;
   z-index: 2300 !important;
   border-radius: 12px !important;
   overflow: hidden !important;
@@ -45,8 +45,8 @@ html[tt-mini] #movie_player video.html5-main-video {
 #tt-mini-close {
   display: none;
   position: fixed;
-  right: 24px;
-  bottom: 201px;
+  left: calc(var(--tt-mini-left, calc(100vw - 416px)) + var(--tt-mini-w, 400px) - 40px);
+  bottom: calc(16px + var(--tt-mini-w, 400px) * 9 / 16 - 40px);
   z-index: 2301;
   width: 32px;
   height: 32px;
@@ -60,6 +60,8 @@ html[tt-mini] #movie_player video.html5-main-video {
 }
 #tt-mini-close:hover { background: rgba(0, 0, 0, 0.85); }
 html[tt-mini] #tt-mini-close { display: block; }
+html[tt-mini] [tt-mini-lift] { z-index: var(--tt-mini-lift, 2019) !important; }
+html[tt-mini] [tt-mini-lift="static"] { position: relative !important; }
 
 /* ---------- "Most popular" comment sort ---------- */
 /* Our option sits last in the DOM (YouTube maps positions to its own sort options) but is shown first. */

@@ -276,9 +276,48 @@
     }
   }
 
+  // The mini player sits over the secondary column and takes its width (16:9 box).
+  function miniGeometry() {
+    const sec = document.querySelector('ytd-watch-flexy #secondary-inner') || document.querySelector('ytd-watch-flexy #secondary');
+    let left, width;
+    const r = sec && sec.getBoundingClientRect();
+    if (r && r.width >= 240 && r.left > 0) {
+      const cs = getComputedStyle(sec);
+      left = r.left + parseFloat(cs.paddingLeft);
+      width = r.width - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    } else {
+      // No column beside the video (narrow window): fall back to the bottom-right corner.
+      width = Math.min(400, window.innerWidth - 32);
+      left = window.innerWidth - 16 - width;
+    }
+    root.style.setProperty('--tt-mini-left', `${Math.round(left)}px`);
+    root.style.setProperty('--tt-mini-w', `${Math.round(width)}px`);
+  }
+
+  // A fixed element can't paint above its ancestors' stacking contexts, so those ancestors are
+  // raised (still below the masthead) while the mini player is shown.
+  function createsStackingContext(cs) {
+    return cs.zIndex !== 'auto' || cs.position === 'fixed' || cs.position === 'sticky' || cs.opacity !== '1' ||
+      cs.transform !== 'none' || cs.filter !== 'none' || cs.isolation === 'isolate' ||
+      /transform|opacity|filter/.test(cs.willChange) || /paint|layout|strict|content/.test(cs.contain);
+  }
+  function liftAncestors(p, on) {
+    for (const el of document.querySelectorAll('[tt-mini-lift]')) el.removeAttribute('tt-mini-lift');
+    if (!on || !p) return;
+    const masthead = document.getElementById('masthead-container');
+    const top = (masthead && parseInt(getComputedStyle(masthead).zIndex, 10)) || 2020;
+    root.style.setProperty('--tt-mini-lift', String(top - 1));
+    for (let el = p.parentElement; el && el !== document.body && el !== root; el = el.parentElement) {
+      const cs = getComputedStyle(el);
+      if (createsStackingContext(cs)) el.setAttribute('tt-mini-lift', cs.position === 'static' ? 'static' : '');
+    }
+  }
+
   function setMini(on) {
+    if (on) miniGeometry();
     if (miniOn === on) return;
     miniOn = on;
+    liftAncestors(document.getElementById('movie_player'), on);
     root.toggleAttribute('tt-mini', on);
     // Let the player re-layout its controls for the new size.
     window.dispatchEvent(new Event('resize'));
@@ -295,6 +334,8 @@
     if (out && !miniDismissed) closeButton();
     setMini(out && !miniDismissed);
   }
+
+  window.addEventListener('resize', e => { if (miniOn && e.isTrusted) miniGeometry(); });
 
   let scrollQueued = false;
   window.addEventListener('scroll', () => {
