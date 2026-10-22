@@ -46,6 +46,11 @@ w.on('pageerror', e => errors.push(e.message));
 await w.goto('https://www.youtube.com/watch?v=abc');
 await w.waitForTimeout(2000);
 check('Cinema mode switched on', await w.evaluate(() => document.querySelector('ytd-watch-flexy').hasAttribute('theater')));
+check('Watch page is visible once theater is on', await w.evaluate(() => !document.documentElement.hasAttribute('tt-cinema-pending') && getComputedStyle(document.querySelector('ytd-watch-flexy')).visibility === 'visible'));
+await w.evaluate(() => document.querySelector('.ytp-size-button').click()); // the user leaves theater view
+await w.waitForTimeout(1500);
+check('Leaving theater view by hand sticks', await w.evaluate(() => !document.querySelector('ytd-watch-flexy').hasAttribute('theater')));
+await w.evaluate(() => document.querySelector('.ytp-size-button').click());
 const calls = await w.evaluate(() => window.qualityCalls);
 check('Default preferred quality is 4K', JSON.stringify(calls[0]?.slice(0, 2)) === '["hd2160","hd2160"]', JSON.stringify(calls));
 const opts = await ctx.newPage();
@@ -136,6 +141,12 @@ check('Changing preferred quality applies to the open video', JSON.stringify(cal
 check('Gear badge switches to 2K at 1440p', await w.evaluate(() => document.getElementById('movie_player').hasAttribute('tt-2k')));
 const badge = await w.evaluate(() => getComputedStyle(document.querySelector('.ytp-settings-button'), '::after').backgroundImage.slice(0, 30));
 check('2K badge artwork applied', badge.startsWith('url("data:image/svg+xml'), badge);
+await w.evaluate(() => window.setQualityFromMenu('hd1080'));
+await w.waitForTimeout(100);
+check('2K badge goes away right after switching from 1440p', await w.evaluate(() => !document.getElementById('movie_player').hasAttribute('tt-2k')));
+await w.evaluate(() => window.setQualityFromMenu('hd1440'));
+await w.waitForTimeout(100);
+check('2K badge appears right after switching to 1440p', await w.evaluate(() => document.getElementById('movie_player').hasAttribute('tt-2k')));
 const sups = await w.evaluate(() => [...document.querySelectorAll('.ytp-settings-menu sup')].map(s => s.textContent));
 check('Quality menu shows 2K for 1440p, HD for 1080p', JSON.stringify(sups) === '["2K","HD"]', JSON.stringify(sups));
 

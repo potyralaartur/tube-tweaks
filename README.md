@@ -8,7 +8,7 @@ A Chrome extension that tunes YouTube to your taste. Design: [Figma – YouTube 
 | --- | --- |
 | Preferred quality | Applies your chosen quality (8K … 360p, or Auto; 2160p (4K) by default) to every video. If a video doesn't offer it, the next lower quality is used. |
 | 1080p Premium (always on) | Whenever 1080p is picked and the video offers **1080p Premium**, Premium is used instead. Needs a YouTube Premium account. |
-| Always use cinema mode | Opens every video in theater view right away (no flash of the default layout). |
+| Always use cinema mode | Opens every video in theater view right away (the default layout is never shown). Leaving theater view by hand sticks for that video. |
 | Hide Ambient mode / Hide Sleep timer | Removes these items from the player's settings (gear) menu. They're recognised by their icons, so it works in any YouTube language. |
 | Add “Most popular” sort | Adds a **Most popular** option to the comment sort menu that orders comments by likes. The pinned comment stays on top. |
 | Default sort | Most popular, Top or Newest, applied whenever comments load. |

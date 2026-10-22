@@ -106,9 +106,19 @@
 
   // ---------- 2K badge state ----------
 
+  // YouTube's onPlaybackQualityChange fires ~40ms after a switch (with the quality id); the poll
+  // below is only a fallback for players created before the hook.
+  let badgePlayer = null;
+  function hookBadge(p) {
+    if (p === badgePlayer || typeof p.addEventListener !== 'function') return;
+    badgePlayer = p;
+    p.addEventListener('onPlaybackQualityChange', q => { if (typeof q === 'string') p.toggleAttribute('tt-2k', q === 'hd1440'); });
+  }
+
   function updateBadge() {
     const p = player();
     if (!p || typeof p.getPlaybackQuality !== 'function') return;
+    hookBadge(p);
     let q = '';
     try { q = p.getPlaybackQuality(); } catch {}
     p.toggleAttribute('tt-2k', q === 'hd1440');
@@ -227,7 +237,7 @@
     scheduleQuality();
   });
 
-  const onNewVideo = () => { appliedKey = null; scheduleQuality(); };
+  const onNewVideo = () => { appliedKey = null; scheduleQuality(); updateBadge(); };
   document.addEventListener('yt-navigate-finish', onNewVideo);
   document.addEventListener('yt-player-updated', onNewVideo);
   // Catches autoplay, playlists and ad → video transitions that keep the same page.
