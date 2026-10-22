@@ -72,7 +72,7 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
   </div></div>
   <div id="columns"><div id="primary"><div id="below">
     <ytd-comments id="comments">
-      <ytd-comments-header-renderer><div id="sort-menu"><tp-yt-paper-listbox>
+      <ytd-comments-header-renderer><div id="sort-menu"><tp-yt-paper-listbox role="listbox" tabindex="0">
         ${sortItem('sort-top', 'Top', 'Show featured comments', true)}
         ${sortItem('sort-new', 'Newest', 'Show recent comments, including potential spam', false)}
         <dom-repeat id="repeat"><template></template></dom-repeat>
