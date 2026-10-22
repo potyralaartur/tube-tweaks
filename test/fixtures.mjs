@@ -36,6 +36,12 @@ const sortItem = (id, title, subtitle, selected) => `<a id="${id}" class="yt-sim
     <div secondary id="subtitle" class="style-scope yt-dropdown-menu">${subtitle}</div>
   </tp-yt-paper-item-body></tp-yt-paper-item></a>`;
 
+// Player settings menu item, built like YouTube's player does (Oct 2026).
+const menuItem = (id, role, label, d, toggle) => `<div id="${id}" class="ytp-menuitem" role="${role}" tabindex="0"${toggle ? ` aria-checked="false" aria-label="${label}"` : ' aria-haspopup="true"'}>
+  <div class="ytp-menuitem-icon">${d ? `<svg height="24" viewBox="0 0 24 24" width="24"><path d="${d}" fill="white"></path></svg>` : ''}</div>
+  <div class="ytp-menuitem-label">${label}</div>
+  <div class="ytp-menuitem-content">${toggle ? '<div class="ytp-menuitem-toggle-checkbox"></div>' : 'Off'}</div></div>`;
+
 export const watch = `<!doctype html><html><head>${ytcfg}
 <style>
 /* YouTube's own badge rule (www-player.css, Oct 2026) */
@@ -53,6 +59,13 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
     <button class="ytp-size-button"></button>
     <button class="ytp-button ytp-settings-button ytp-hd-quality-badge"></button>
     <div class="ytp-settings-menu"><div class="ytp-panel-menu">
+      ${menuItem('mi-stable', 'menuitemcheckbox', 'Stable Volume', 'M12 .99C5.92 .99 1 5.92 1 12Z', true)}
+      ${menuItem('mi-ambient', 'menuitemcheckbox', 'Ambient mode', 'M12 .5C11.73 .5 11.48 .60 11.29 .79C11.10 .98 11 1.23 11 1.5V3.5Z', true)}
+      ${menuItem('mi-ambient-legacy', 'menuitemcheckbox', 'Ambient mode', 'M21 7v10H3V7h18m1-1H2v12h20V6zM11.5 2v3h1V2h-1z', true)}
+      ${menuItem('mi-annotations', 'menuitemcheckbox', 'Annotations', 'M17.5,7c1.93,0,3.5,1.57Z', true)}
+      ${menuItem('mi-sleep', 'menuitem', 'Sleep timer', 'M12.33 1.00C12.22 1.00 12.11 1.00 12 1Z', false)}
+      ${menuItem('mi-sleep-noicon', 'menuitem', 'Sleep timer', null, false)}
+      ${menuItem('mi-speed', 'menuitem', 'Playback speed', 'M12 1c1.44 0 2.87.28 4.21.83Z', false)}
       <div class="ytp-menuitem" role="menuitemradio"><div class="ytp-menuitem-label"><div><span>1440p60 HDR <sup class="ytp-swatch-color-white">HD</sup></span></div></div></div>
       <div class="ytp-menuitem" role="menuitemradio"><div class="ytp-menuitem-label"><div><span>1080p60 HDR <sup class="ytp-swatch-color-white">HD</sup></span></div></div></div>
     </div></div>

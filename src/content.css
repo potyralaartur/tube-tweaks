@@ -14,6 +14,20 @@ html[tt-hide-shorts] ytd-browse[page-subtype="home"] yt-chip-cloud-chip-renderer
   display: none !important;
 }
 
+/* ---------- Player settings menu: hide Ambient mode / Sleep timer ---------- */
+/* Matched by icon (same in every language; modern and legacy icon sets), with label fallbacks:
+   Ambient mode carries its label in aria-label; Sleep timer is marked by the content script. */
+html[tt-hide-ambient] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M12 .5C11.73 .5 11.48"]),
+html[tt-hide-ambient] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M21 7v10H3V7h18m1-1H2v12h20V6z"]),
+html[tt-hide-ambient] #movie_player .ytp-menuitem[role="menuitemcheckbox"][aria-label="Ambient mode" i],
+html[tt-hide-ambient] #movie_player .ytp-menuitem[role="menuitemcheckbox"][aria-label="Cinematic lighting" i],
+html[tt-hide-ambient] #movie_player .ytp-menuitem[role="menuitemcheckbox"][aria-label="Oświetlenie kinowe" i],
+html[tt-hide-sleep-timer] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M12.33 1.00C12.22 1.00"]),
+html[tt-hide-sleep-timer] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M16.67,4.31C19.3,5.92"]),
+html[tt-hide-sleep-timer] #movie_player .ytp-menuitem[tt-sleep-timer] {
+  display: none !important;
+}
+
 /* ---------- Hide low-view videos (marked by the content script) ---------- */
 html[tt-hide-low-views] ytd-browse[page-subtype="home"] ytd-rich-item-renderer[tt-low-views] {
   display: none !important;

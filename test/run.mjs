@@ -109,6 +109,15 @@ check('2K badge artwork applied', badge.startsWith('url("data:image/svg+xml'), b
 const sups = await w.evaluate(() => [...document.querySelectorAll('.ytp-settings-menu sup')].map(s => s.textContent));
 check('Quality menu shows 2K for 1440p, HD for 1080p', JSON.stringify(sups) === '["2K","HD"]', JSON.stringify(sups));
 
+const menuShown = () => w.evaluate(() => [...document.querySelectorAll('.ytp-settings-menu .ytp-menuitem[id]')]
+  .filter(e => getComputedStyle(e).display !== 'none').map(e => e.id));
+let shownItems = await menuShown();
+check('Ambient mode and Sleep timer hidden from the player menu', JSON.stringify(shownItems) === '["mi-stable","mi-annotations","mi-speed"]', JSON.stringify(shownItems));
+await opts.evaluate(async () => { const s = await TTSettings.load(); await TTSettings.save({ ...s, hideAmbient: false, hideSleepTimer: false }); });
+await w.waitForTimeout(600);
+shownItems = await menuShown();
+check('Turning the options off brings them back', shownItems.length === 7, JSON.stringify(shownItems));
+
 check('No page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();
 fs.rmSync(profile, { recursive: true, force: true });
