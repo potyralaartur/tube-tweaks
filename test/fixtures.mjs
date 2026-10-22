@@ -99,6 +99,11 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
   const p = document.getElementById('movie_player');
   window.qualityCalls = [];
   let current = 'hd720';
+  // Like YouTube's player: API events are registered by name on the element.
+  const apiListeners = [];
+  const domAdd = p.addEventListener.bind(p);
+  p.addEventListener = (type, fn, o) => type === 'onPlaybackQualityChange' ? apiListeners.push(fn) : domAdd(type, fn, o);
+  window.setQualityFromMenu = q => { current = q; apiListeners.forEach(fn => fn(q)); };
   Object.assign(p, {
     getAvailableQualityLevels: () => ['hd2160', 'hd1440', 'hd1080', 'hd720', 'auto'],
     getAvailableQualityData: () => [
@@ -106,7 +111,7 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
       { quality: 'hd1080', qualityLabel: '1080p', isPlayable: true },
     ],
     getVideoData: () => ({ video_id: 'abc' }),
-    setPlaybackQualityRange: (a, b, f) => { window.qualityCalls.push([a, b, f]); current = a; },
+    setPlaybackQualityRange: (a, b, f) => { window.qualityCalls.push([a, b, f]); current = a; apiListeners.forEach(fn => fn(a)); },
     getPlaybackQuality: () => current,
     getPlaybackQualityLabel: () => current === 'hd1080' ? '1080p Premium' : current,
   });

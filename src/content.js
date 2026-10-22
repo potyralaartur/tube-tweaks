@@ -13,25 +13,44 @@
   const videoId = () => new URLSearchParams(location.search).get('v');
 
   // ---------- Cinema mode ----------
-  // YouTube opens the watch page in theater view when the "wide" cookie is 1, so setting it
-  // before the page renders gives cinema mode with no flash. A remembered flag lets us do that
-  // synchronously at document_start, before chrome.storage answers.
+  // YouTube no longer opens a freshly loaded watch page in theater view from the "wide" cookie,
+  // so the size button is clicked the moment the watch layout exists (straight from the
+  // MutationObserver, not the throttled tick). Until theater is on, the not-yet-theater layout is
+  // kept invisible (tt-cinema-pending) so the switch doesn't show as a jump. A remembered flag
+  // lets this start at document_start, before chrome.storage answers.
   const setWideCookie = () => { document.cookie = 'wide=1; domain=.youtube.com; path=/; max-age=31536000; secure; samesite=lax'; };
-  try { if (localStorage.getItem('tt-cinema') === '1') setWideCookie(); } catch {}
+  let cinemaFlag = false;
+  try { cinemaFlag = localStorage.getItem('tt-cinema') === '1'; } catch {}
+  if (cinemaFlag) setWideCookie();
 
-  let cinemaVid = null, cinemaTries = 0, cinemaLastClick = 0;
+  let pendingTimer = null;
+  function setCinemaPending(on) {
+    clearTimeout(pendingTimer);
+    root.toggleAttribute('tt-cinema-pending', on);
+    if (on) pendingTimer = setTimeout(() => root.removeAttribute('tt-cinema-pending'), 2500); // never hide for long
+  }
+  if (cinemaFlag && isWatch()) setCinemaPending(true);
+
+  // Once a video has reached theater view, the user is free to leave it (button or "t").
+  let cinemaVid = null, cinemaDone = null, cinemaTries = 0, cinemaLastClick = 0;
   function enforceCinema() {
-    if (!S.cinemaMode || !isWatch()) return;
+    if (!(ready ? S.cinemaMode : cinemaFlag) || !isWatch()) return;
     const vid = videoId();
     if (cinemaVid !== vid) { cinemaVid = vid; cinemaTries = 0; }
+    if (cinemaDone === vid) return;
     const flexy = document.querySelector('ytd-watch-flexy');
     if (!flexy || flexy.hasAttribute('hidden')) return;
-    if (flexy.hasAttribute('theater') || flexy.hasAttribute('fullscreen') || document.fullscreenElement) return;
-    if (cinemaTries >= 5 || Date.now() - cinemaLastClick < 1000) return;
+    if (flexy.hasAttribute('theater') || flexy.hasAttribute('fullscreen') || document.fullscreenElement) {
+      cinemaDone = vid;
+      setCinemaPending(false);
+      return;
+    }
+    if (cinemaTries >= 5 || Date.now() - cinemaLastClick < 600) return;
     const btn = document.querySelector('#movie_player .ytp-size-button');
     if (!btn) return;
     cinemaTries++; cinemaLastClick = Date.now();
     btn.click();
+    setTimeout(enforceCinema, 650); // retry if the click didn't take (player still wiring up)
   }
 
   // ---------- Hide low-view videos on Home ----------
@@ -416,14 +435,21 @@
   }
   function schedule() { if (!timer) timer = setTimeout(tick, 200); }
 
-  new MutationObserver(schedule).observe(root, { childList: true, subtree: true });
+  new MutationObserver(() => {
+    if (cinemaDone !== cinemaVid || cinemaVid !== videoId()) enforceCinema(); // cheap until theater is reached
+    schedule();
+  }).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['theater'] });
 
   document.addEventListener('yt-navigate-start', () => {
-    if (S.cinemaMode) setWideCookie();
+    // Coming from a non-watch page the watch layout is hidden anyway; from a video the user left\n    // theater on purpose, keep showing it while the next one loads.\n    if (S.cinemaMode) { setWideCookie(); if (!isWatch()) setCinemaPending(true); }
     setMini(false);
     setPopular(false);
   });
-  document.addEventListener('yt-navigate-finish', schedule);
+  document.addEventListener('yt-navigate-finish', () => {
+    if (!isWatch()) setCinemaPending(false);
+    enforceCinema();
+    schedule();
+  });
   document.addEventListener('fullscreenchange', schedule);
 
   // ---------- Settings ----------
@@ -432,7 +458,7 @@
     S = settings;
     ready = true;
     try { localStorage.setItem('tt-cinema', S.cinemaMode ? '1' : '0'); } catch {}
-    if (S.cinemaMode) setWideCookie();
+    if (S.cinemaMode) setWideCookie(); else setCinemaPending(false);
     root.toggleAttribute('tt-hide-ambient', S.hideAmbient);
     root.toggleAttribute('tt-hide-sleep-timer', S.hideSleepTimer);
     root.toggleAttribute('tt-hide-shorts', S.hideShorts);
