@@ -13,7 +13,8 @@
   const videoId = () => new URLSearchParams(location.search).get('v');
 
   // ---------- Cinema mode ----------
-  // YouTube no longer opens a freshly loaded watch page in theater view from the "wide" cookie,
+  // YouTube now keeps theater view only for the browser session (its "wide" cookie is a session
+  // cookie and the server ignores it on load: START_IN_THEATER_MODE is always false),
   // so the size button is clicked the moment the watch layout exists (straight from the
   // MutationObserver, not the throttled tick). Until theater is on, the not-yet-theater layout is
   // kept invisible (tt-cinema-pending) so the switch doesn't show as a jump. A remembered flag
@@ -45,13 +46,18 @@
       setCinemaPending(false);
       return;
     }
-    if (cinemaTries >= 5 || Date.now() - cinemaLastClick < 600) return;
+    if (cinemaTries >= 8 || Date.now() - cinemaLastClick < 300) return;
     const btn = document.querySelector('#movie_player .ytp-size-button');
     if (!btn) return;
     cinemaTries++; cinemaLastClick = Date.now();
     btn.click();
-    setTimeout(enforceCinema, 650); // retry if the click didn't take (player still wiring up)
+    setTimeout(enforceCinema, 320); // retry if the click didn't take (player still wiring up)
   }
+  // YouTube announces its own starting state on load (enabled:false, since it no longer keeps
+  // theater across sessions). A click made just before that is lost, so go again right after.
+  document.addEventListener('yt-set-theater-mode-enabled', e => {
+    if (e.detail && e.detail.enabled === false && cinemaDone !== videoId()) { cinemaLastClick = 0; setTimeout(enforceCinema, 0); }
+  });
 
   // ---------- Hide low-view videos on Home ----------
   let subs = null, subsSets = null, subsRequested = 0;
