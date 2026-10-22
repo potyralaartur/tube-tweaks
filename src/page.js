@@ -1,0 +1,233 @@
+// Runs in YouTube's own JavaScript world so it can use the player API (#movie_player)
+// and the logged-in Innertube API. Settings arrive from content.js through the DOM.
+(() => {
+  'use strict';
+
+  const ORDER = ['highres', 'hd2880', 'hd2160', 'hd1440', 'hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
+  const root = document.documentElement;
+  let settings = null;
+  let appliedKey = null;
+  let retryTimer = null;
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const player = () => document.getElementById('movie_player');
+
+  function readSettings() {
+    try { settings = JSON.parse(root.getAttribute('tt-settings') || 'null'); } catch { settings = null; }
+  }
+
+  // ---------- Preferred quality + 1080p Premium ----------
+
+  // Highest available quality that is not above the preferred one.
+  function pickQuality(levels, preferred) {
+    const pref = ORDER.indexOf(preferred);
+    const avail = levels.filter(l => ORDER.includes(l)).sort((a, b) => ORDER.indexOf(a) - ORDER.indexOf(b));
+    return avail.find(l => ORDER.indexOf(l) >= pref) || avail[avail.length - 1] || null;
+  }
+
+  function premiumEntry(p) {
+    const data = (typeof p.getAvailableQualityData === 'function' && p.getAvailableQualityData()) || [];
+    return data.find(d => d && d.quality === 'hd1080' && /premium/i.test(d.qualityLabel || '') &&
+      d.isPlayable !== false) || null;
+  }
+
+  function currentLabel(p) {
+    try {
+      if (typeof p.getPlaybackQualityLabel === 'function') return p.getPlaybackQualityLabel() || '';
+      const d = p.getAvailableQualityData?.().find(x => x.quality === p.getPlaybackQuality());
+      return (d && d.qualityLabel) || '';
+    } catch { return ''; }
+  }
+
+  // Returns true when there is nothing left to do for this video.
+  function applyQuality() {
+    const p = player();
+    if (!settings || !p || typeof p.getAvailableQualityLevels !== 'function') return false;
+    if (settings.quality === 'auto') return true;
+    if (p.classList.contains('ad-showing')) return false;
+    const vid = p.getVideoData?.()?.video_id;
+    if (!vid) return false;
+    const levels = p.getAvailableQualityLevels() || [];
+    if (!levels.length) return false;
+    const target = pickQuality(levels, settings.quality);
+    if (!target) return false;
+
+    const key = vid + '|' + settings.quality;
+    if (appliedKey === key) return true;
+    appliedKey = key;
+
+    const prem = target === 'hd1080' ? premiumEntry(p) : null;
+    try {
+      if (prem && prem.formatId) p.setPlaybackQualityRange(target, target, prem.formatId);
+      else if (typeof p.setPlaybackQualityRange === 'function') p.setPlaybackQualityRange(target, target);
+      else p.setPlaybackQuality(target);
+    } catch (e) { /* the player rejects calls mid-load; the next attempt retries */ appliedKey = null; return false; }
+
+    // 1080p Premium is always on. If the API did not switch to it, pick it in the menu.
+    if (prem) setTimeout(() => {
+      if (!/premium/i.test(currentLabel(p))) selectInQualityMenu(label => /1080p/.test(label) && /premium/i.test(label));
+    }, 1500);
+    return true;
+  }
+
+  async function selectInQualityMenu(match) {
+    const p = player();
+    const btn = p && p.querySelector('.ytp-settings-button');
+    if (!btn) return;
+    root.setAttribute('tt-menu-busy', '');
+    try {
+      btn.click();
+      await sleep(200);
+      const items = [...p.querySelectorAll('.ytp-settings-menu .ytp-panel-menu .ytp-menuitem')];
+      const qualityItem = items.find(i => /\d{3,4}p|auto/i.test(i.querySelector('.ytp-menuitem-content')?.textContent || ''));
+      if (!qualityItem) { btn.click(); return; }
+      qualityItem.click();
+      await sleep(250);
+      const options = [...p.querySelectorAll('.ytp-settings-menu .ytp-quality-menu .ytp-menuitem, .ytp-settings-menu .ytp-panel-menu .ytp-menuitem')];
+      const opt = options.find(o => match(o.textContent || ''));
+      if (opt) opt.click();
+      await sleep(100);
+      const menu = p.querySelector('.ytp-settings-menu');
+      if (menu && menu.style.display !== 'none') btn.click();
+    } finally {
+      setTimeout(() => root.removeAttribute('tt-menu-busy'), 150);
+    }
+  }
+
+  function scheduleQuality() {
+    clearTimeout(retryTimer);
+    let tries = 0;
+    const attempt = () => {
+      if (applyQuality() || ++tries > 40) return;
+      retryTimer = setTimeout(attempt, 250);
+    };
+    attempt();
+  }
+
+  // ---------- 2K badge state ----------
+
+  function updateBadge() {
+    const p = player();
+    if (!p || typeof p.getPlaybackQuality !== 'function') return;
+    let q = '';
+    try { q = p.getPlaybackQuality(); } catch {}
+    p.toggleAttribute('tt-2k', q === 'hd1440');
+  }
+
+  // ---------- Subscriptions (for hiding low-view videos) ----------
+
+  const SUBS_CACHE = 'tt-subs-v1';
+  const SUBS_TTL = 6 * 60 * 60 * 1000;
+  let subsPromise = null;
+
+  async function sapisidHash() {
+    const m = document.cookie.match(/(?:^|;\s*)(?:SAPISID|__Secure-3PAPISID)=([^;]+)/);
+    if (!m || !crypto.subtle) return null;
+    const ts = Math.floor(Date.now() / 1000);
+    const buf = await crypto.subtle.digest('SHA-1', new TextEncoder().encode(`${ts} ${m[1]} ${location.origin}`));
+    const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+    return `SAPISIDHASH ${ts}_${hex}`;
+  }
+
+  function collectChannels(node, out, inSubs) {
+    if (!node || typeof node !== 'object') return;
+    if (Array.isArray(node)) { for (const n of node) collectChannels(n, out, inSubs); return; }
+    const ch = node.channelRenderer || node.gridChannelRenderer;
+    if (ch && ch.channelId) {
+      out.ids.add(ch.channelId);
+      const url = ch.navigationEndpoint?.browseEndpoint?.canonicalBaseUrl;
+      if (url) out.urls.add(url.toLowerCase());
+      const name = ch.title?.simpleText || ch.title?.runs?.[0]?.text;
+      if (name) out.names.add(name.trim().toLowerCase());
+    }
+    if (inSubs && node.browseEndpoint && /^UC/.test(node.browseEndpoint.browseId || '')) {
+      out.ids.add(node.browseEndpoint.browseId);
+      if (node.browseEndpoint.canonicalBaseUrl) out.urls.add(node.browseEndpoint.canonicalBaseUrl.toLowerCase());
+    }
+    if (inSubs && node.formattedTitle?.simpleText) out.names.add(node.formattedTitle.simpleText.trim().toLowerCase());
+    for (const k in node) collectChannels(node[k], out, inSubs || k === 'guideSubscriptionsSectionRenderer');
+  }
+
+  function findContinuation(node) {
+    if (!node || typeof node !== 'object') return null;
+    if (node.continuationCommand?.token) return node.continuationCommand.token;
+    if (node.nextContinuationData?.continuation) return node.nextContinuationData.continuation;
+    for (const k in node) { const t = findContinuation(node[k]); if (t) return t; }
+    return null;
+  }
+
+  async function fetchSubscriptions() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(SUBS_CACHE) || 'null');
+      if (cached && Date.now() - cached.t < SUBS_TTL) return cached;
+    } catch {}
+
+    for (let i = 0; i < 40 && !(window.ytcfg && window.ytcfg.get && window.ytcfg.get('INNERTUBE_CONTEXT')); i++) await sleep(250);
+    const cfg = window.ytcfg;
+    if (!cfg || !cfg.get) return null;
+    if (!cfg.get('LOGGED_IN')) return { t: Date.now(), loggedIn: false, ids: [], urls: [], names: [] };
+
+    const context = cfg.get('INNERTUBE_CONTEXT');
+    const key = cfg.get('INNERTUBE_API_KEY');
+    const headers = {
+      'Content-Type': 'application/json',
+      'X-Origin': location.origin,
+      'X-Goog-AuthUser': String(cfg.get('SESSION_INDEX') ?? 0),
+      'X-Youtube-Client-Name': String(cfg.get('INNERTUBE_CONTEXT_CLIENT_NAME') ?? 1),
+      'X-Youtube-Client-Version': String(cfg.get('INNERTUBE_CLIENT_VERSION') ?? ''),
+    };
+    const pageId = cfg.get('DELEGATED_SESSION_ID');
+    if (pageId) headers['X-Goog-PageId'] = pageId;
+    const call = async (endpoint, body) => {
+      const auth = await sapisidHash();
+      const res = await fetch(`/youtubei/v1/${endpoint}?prettyPrint=false${key ? '&key=' + key : ''}`, {
+        method: 'POST', credentials: 'include', headers: auth ? { ...headers, Authorization: auth } : headers,
+        body: JSON.stringify({ context, ...body }),
+      });
+      if (!res.ok) throw new Error('innertube ' + res.status);
+      return res.json();
+    };
+
+    const out = { ids: new Set(), urls: new Set(), names: new Set() };
+    try { collectChannels(await call('guide', {}), out, false); } catch {}
+    try {
+      let json = await call('browse', { browseId: 'FEchannels' });
+      for (let page = 0; page < 50 && json; page++) {
+        collectChannels(json, out, false);
+        const token = findContinuation(json);
+        json = token ? await call('browse', { continuation: token }) : null;
+      }
+    } catch {}
+
+    const result = { t: Date.now(), loggedIn: true, ids: [...out.ids], urls: [...out.urls], names: [...out.names] };
+    if (result.ids.length) { try { localStorage.setItem(SUBS_CACHE, JSON.stringify(result)); } catch {} }
+    return result;
+  }
+
+  document.addEventListener('tt-request-subs', () => {
+    if (!subsPromise) subsPromise = fetchSubscriptions().finally(() => setTimeout(() => { subsPromise = null; }, 60000));
+    subsPromise.then(subs => {
+      document.dispatchEvent(new CustomEvent('tt-subs', { detail: JSON.stringify(subs) }));
+    });
+  });
+
+  // ---------- Wiring ----------
+
+  document.addEventListener('tt-settings', () => {
+    readSettings();
+    appliedKey = null;
+    scheduleQuality();
+  });
+
+  const onNewVideo = () => { appliedKey = null; scheduleQuality(); };
+  document.addEventListener('yt-navigate-finish', onNewVideo);
+  document.addEventListener('yt-player-updated', onNewVideo);
+  // Catches autoplay, playlists and ad → video transitions that keep the same page.
+  document.addEventListener('loadeddata', e => {
+    if (e.target instanceof HTMLVideoElement && e.target.closest('#movie_player')) scheduleQuality();
+  }, true);
+
+  setInterval(updateBadge, 1000);
+  readSettings();
+  scheduleQuality();
+})();
