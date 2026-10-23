@@ -42,6 +42,7 @@ const shown = await h.evaluate(() => [...document.querySelectorAll('ytd-rich-ite
   .filter(e => getComputedStyle(e).display !== 'none').map(e => e.id));
 check('Shorts shelf and tiles hidden', !shown.includes('shorts-shelf') && !shown.includes('short-tile'), JSON.stringify(shown));
 check('Low-view video from unsubscribed channel hidden', !shown.includes('random-low'));
+check('Low-view tile with an icon count hidden (count read from aria-label)', !shown.includes('icon-low') && shown.includes('icon-high') && shown.includes('icon-live'));
 check('Low-view video from subscribed channel kept (handle)', shown.includes('subbed-low'));
 check('Low-view video from subscribed channel kept (channel id)', shown.includes('subbed-by-id'));
 check('High-view video from unsubscribed channel kept', shown.includes('random-high'));
@@ -53,6 +54,17 @@ await w.goto('https://www.youtube.com/watch?v=abc');
 await w.waitForTimeout(2000);
 check('Cinema mode switched on', await w.evaluate(() => document.querySelector('ytd-watch-flexy').hasAttribute('theater')));
 check('Page starts in theater view itself (no switch)', await w.evaluate(() => window.sizeClicks === 0), String(await w.evaluate(() => window.sizeClicks)));
+const loading = await w.evaluate(() => {
+  const vis = sel => getComputedStyle(document.querySelector(sel)).visibility;
+  const before = [vis('#watch-page-skeleton'), vis('body > #player')];
+  document.documentElement.setAttribute('tt-cinema-pending', '');
+  const box = getComputedStyle(document.body, '::before');
+  const during = [vis('#watch-page-skeleton'), vis('body > #player'), box.top, Math.round(parseFloat(box.height)), box.width === `${innerWidth}px` || box.left === '0px'];
+  document.documentElement.removeAttribute('tt-cinema-pending');
+  return { before, during, h: Math.round(Math.min(innerWidth * 0.5625, Math.max(480, innerHeight - 169))) };
+});
+check('While loading, the default-size early player is hidden behind a theater-shaped box', loading.before.join() === 'visible,visible' &&
+  loading.during[0] === 'hidden' && loading.during[1] === 'hidden' && loading.during[2] === '56px' && loading.during[3] === loading.h, JSON.stringify(loading));
 check('Watch page is visible once theater is on', await w.evaluate(() => !document.documentElement.hasAttribute('tt-cinema-pending') && getComputedStyle(document.querySelector('ytd-watch-flexy')).visibility === 'visible'));
 await w.evaluate(() => document.querySelector('.ytp-size-button').click()); // the user leaves theater view
 await w.waitForTimeout(1500);
