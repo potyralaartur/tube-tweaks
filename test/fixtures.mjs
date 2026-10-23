@@ -27,8 +27,8 @@ export const channels = {
   contents: { channelRenderer: { channelId: 'UCsub2', title: { simpleText: 'Sub Two' }, navigationEndpoint: { browseEndpoint: { canonicalBaseUrl: '/channel/UCsub2' } } } },
 };
 
-const thread = (id, likes, text = `comment ${id}`, time = '1 day ago') => `<ytd-comment-thread-renderer id="${id}"><ytd-comment-view-model id="comment">
-  <span id="published-time-text"><a href="#">${time}</a></span><div id="expander"><yt-attributed-string id="content-text"><span>${text}</span></yt-attributed-string></div>
+const thread = (id, likes, text = `comment ${id}`, time = '1 day ago', lc = id) => `<ytd-comment-thread-renderer id="${id}"><ytd-comment-view-model id="comment">
+  <span id="published-time-text"><a href="/watch?v=abc&lc=${lc}">${time}</a></span><div id="expander"><yt-attributed-string id="content-text"><span>${text}</span></yt-attributed-string></div>
   <span id="vote-count-middle">${likes}</span></ytd-comment-view-model></ytd-comment-thread-renderer>`;
 
 // Same structure as YouTube's yt-dropdown-menu items (Oct 2026).
@@ -82,7 +82,9 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
       <ytd-item-section-renderer><div id="contents">
         ${thread('c5', '5')}${thread('c1200', '1.2K', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT', '6 hours ago')}${thread('c30', '30')}${thread('c0', '')}
         ${thread('copy', '24', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT ....', '5 hours ago')}
-        ${thread('short1', '', 'First!!', '2 hours ago')}${thread('short2', '', 'first', '1 hour ago')}
+        ${thread('short1', '', 'Ferrari being Ferrari!!', '2 hours ago')}${thread('short2', '3', 'ferrari being ferrari', '1 hour ago')}
+        ${thread('real1', '40', 'This was honestly the best race of the whole year', '3 hours ago')}${thread('real2', '35', 'This was honestly the best race of the whole year!', '2 hours ago')}
+        ${thread('again', '30', 'comment c30', '1 day ago', 'c30')}
         <ytd-continuation-item-renderer id="cont"></ytd-continuation-item-renderer>
       </div></ytd-item-section-renderer>
     </ytd-comments>

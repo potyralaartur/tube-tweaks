@@ -316,28 +316,36 @@
 
   // ---------- Copied comments (spam bots reposting popular comments) ----------
   // Top-level comments with the same text, ignoring case, punctuation, emoji and spacing, are one
-  // group. The oldest is the original (then the most liked, then the first shown); the rest are hidden.
-  const MIN_COPY_LENGTH = 15;
+  // group. The most liked is the original (then the oldest, then the first shown). A copy is hidden
+  // only if it has at most a tenth of the original's likes, so two real, equally liked comments that
+  // happen to match both stay. Short texts are skipped: real people repeat short phrases. The same
+  // comment rendered twice (YouTube sometimes re-inserts a block) is hidden as well.
+  const MIN_COPY_LENGTH = 25;
+  const commentId = el => (el.querySelector('#comment #published-time-text a, #published-time-text a')?.getAttribute('href') || '').match(/[?&]lc=([^&]+)/)?.[1] || null;
   const normalizeComment = text => text.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
   function markCopies() {
     const threads = isWatch() ? [...document.querySelectorAll('ytd-comments ytd-item-section-renderer #contents > ytd-comment-thread-renderer')] : [];
     const groups = new Map();
+    const copies = new Set();
+    const seenIds = new Set();
     for (const el of threads) {
+      const id = commentId(el);
+      if (id) { if (seenIds.has(id)) { copies.add(el); continue; } seenIds.add(id); }
       const textEl = el.querySelector('#comment #content-text, #content-text');
       const key = textEl ? normalizeComment(textEl.textContent) : '';
       if (key.length < MIN_COPY_LENGTH) continue;
       const pinned = !!el.querySelector('#pinned-comment-badge ytd-pinned-comment-badge-renderer');
-      const age = parseAge(el.querySelector('#published-time-text')?.textContent);
+      const age = parseAge(el.querySelector('#comment #published-time-text, #published-time-text')?.textContent);
       const item = { el, pinned, age: age ?? -1, likes: likeCount(el) };
       if (groups.has(key)) groups.get(key).push(item); else groups.set(key, [item]);
     }
-    const copies = new Set();
     for (const items of groups.values()) {
       if (items.length < 2) continue;
       // Stable sort keeps DOM order as the last tie-break.
-      items.sort((a, b) => (b.pinned - a.pinned) || (b.age - a.age) || (b.likes - a.likes));
-      items.slice(1).forEach(i => copies.add(i.el));
+      items.sort((a, b) => (b.pinned - a.pinned) || (b.likes - a.likes) || (b.age - a.age));
+      const original = items[0];
+      for (const i of items.slice(1)) if (i.likes * 10 <= original.likes) copies.add(i.el);
     }
     for (const el of document.querySelectorAll('ytd-comment-thread-renderer[tt-copy]')) if (!copies.has(el)) el.removeAttribute('tt-copy');
     for (const el of copies) if (!el.hasAttribute('tt-copy')) el.setAttribute('tt-copy', '');
