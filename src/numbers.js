@@ -40,5 +40,25 @@
   const VIEW_WORDS = /view|wyświetle|aufruf|vue|visualiza|visualizz|просмотр|перегляд|weergave|visning|visualizações|görüntüleme|zhlédnutí|megtekintés|vizionăr|προβολ|次|조회|回視聴|lượt xem|tayangan|การดู/i;
   const LIVE_WORDS = /watching|ogląda|zuschauer|spectateur|viendo|guardando|смотр|kijk/i;
 
-  root.TTNumbers = { parseCount, VIEW_WORDS, LIVE_WORDS };
+  // "6 hours ago", "1 day ago (edited)", "5 godzin temu", "vor 3 Tagen" → age in seconds, or null.
+  const AGE_UNITS = [
+    [/^(sec|sek|seg|сек)/i, 1],
+    [/^(min|мин|хв)/i, 60],
+    [/^(hour|hr|godz|stund|heure|hora|or[ae]|час|год|uur|saat)/i, 3600],
+    [/^(day|dni|dzie|tag|jour|día|dia|giorn|д[ен]|dag|gün)/i, 86400],
+    [/^(week|wk|tydz|tygod|woche|semaine|semana|settiman|недел|тиж|wek|hafta)/i, 604800],
+    [/^(month|mo|miesi|monat|mois|mes|mês|mese|месяц|місяц|maand|ay)/i, 2592000],
+    [/^(year|yr|rok|lat|jahr|an|año|ano|ann|год|лет|рік|jaar|yıl)/i, 31536000],
+  ];
+  function parseAge(text) {
+    if (!text) return null;
+    const t = String(text).toLowerCase();
+    const m = t.match(/(\d+)\s*([^\d\s]+)/) || t.match(/()(\p{L}+)/u);
+    if (!m) return null;
+    const n = m[1] ? parseInt(m[1], 10) : 1;
+    for (const [re, secs] of AGE_UNITS) if (re.test(m[2])) return n * secs;
+    return null;
+  }
+
+  root.TTNumbers = { parseCount, parseAge, VIEW_WORDS, LIVE_WORDS };
 })(typeof window !== 'undefined' ? window : globalThis);

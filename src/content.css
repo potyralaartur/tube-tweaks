@@ -91,6 +91,9 @@ html[tt-mini] ytd-watch-flexy #player-container,
 html[tt-mini] [tt-mini-lift] { z-index: var(--tt-mini-lift, 2019) !important; }
 html[tt-mini] [tt-mini-lift="static"] { position: relative !important; }
 
+/* ---------- Copied comments (marked by the content script) ---------- */
+html[tt-hide-copies] ytd-comments ytd-comment-thread-renderer[tt-copy] { display: none !important; }
+
 /* ---------- "Most popular" comment sort ---------- */
 /* Our option sits last in the DOM (YouTube maps positions to its own sort options) but is shown first. */
 ytd-comments #sort-menu tp-yt-paper-listbox:has(> .tt-sort-item) {
