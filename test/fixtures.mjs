@@ -1,5 +1,5 @@
 // Minimal stand-ins for YouTube pages, served by Playwright in place of www.youtube.com.
-export const ytcfg = `<script>window.ytcfg={d:{LOGGED_IN:true,INNERTUBE_CONTEXT:{client:{clientName:'WEB'}},INNERTUBE_API_KEY:'k',INNERTUBE_CLIENT_VERSION:'2.0'},get(k){return this.d[k]}};</script>`;
+export const ytcfg = `<script>window.ytcfg={d:{LOGGED_IN:true,INNERTUBE_CONTEXT:{client:{clientName:'WEB'}},INNERTUBE_API_KEY:'k',INNERTUBE_CLIENT_VERSION:'2.0',START_IN_THEATER_MODE:false},get(k){return this.d[k]}};</script>`;
 
 const item = (id, channelHref, views) => `
   <ytd-rich-item-renderer id="${id}">
@@ -87,7 +87,10 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
 </ytd-watch-flexy></ytd-app>
 <script>
   const flexy = document.querySelector('ytd-watch-flexy');
-  document.querySelector('.ytp-size-button').addEventListener('click', () => flexy.toggleAttribute('theater'));
+  // Like YouTube: the starting layout comes from ytcfg; the size button toggles it.
+  if (ytcfg.get('START_IN_THEATER_MODE')) flexy.setAttribute('theater', '');
+  window.sizeClicks = 0;
+  document.querySelector('.ytp-size-button').addEventListener('click', () => { window.sizeClicks++; flexy.toggleAttribute('theater'); });
   // Like iron-selector: the listbox selects whichever of its children was clicked.
   const listbox = document.querySelector('#sort-menu tp-yt-paper-listbox');
   listbox.addEventListener('click', e => {
