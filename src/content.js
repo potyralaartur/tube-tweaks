@@ -316,9 +316,10 @@
 
   // ---------- Copied comments (spam bots reposting popular comments) ----------
   // Top-level comments with the same text, ignoring case, punctuation, emoji and spacing, are one
-  // group. The most liked is the original (then the oldest, then the first shown). A copy is hidden
-  // only if it has at most a tenth of the original's likes, so two real, equally liked comments that
-  // happen to match both stay. Short texts are skipped: real people repeat short phrases. The same
+  // group. The oldest is the original, and every newer copy is hidden, however many likes it has
+  // (bots often get them boosted). YouTube's times are coarse ("2 weeks ago"); when a copy shows
+  // the same time as the oldest there is no telling which came first, so it stays. Short texts are
+  // skipped: real people repeat short phrases. The same
   // comment rendered twice (YouTube sometimes re-inserts a block) is hidden as well.
   const MIN_COPY_LENGTH = 25;
   const commentId = el => (el.querySelector('#comment #published-time-text a, #published-time-text a')?.getAttribute('href') || '').match(/[?&]lc=([^&]+)/)?.[1] || null;
@@ -343,9 +344,9 @@
     for (const items of groups.values()) {
       if (items.length < 2) continue;
       // Stable sort keeps DOM order as the last tie-break.
-      items.sort((a, b) => (b.pinned - a.pinned) || (b.likes - a.likes) || (b.age - a.age));
+      items.sort((a, b) => (b.pinned - a.pinned) || (b.age - a.age));
       const original = items[0];
-      for (const i of items.slice(1)) if (i.likes * 10 <= original.likes) copies.add(i.el);
+      for (const i of items.slice(1)) if (i.age >= 0 && original.age > i.age) copies.add(i.el);
     }
     for (const el of document.querySelectorAll('ytd-comment-thread-renderer[tt-copy]')) if (!copies.has(el)) el.removeAttribute('tt-copy');
     for (const el of copies) if (!el.hasAttribute('tt-copy')) el.setAttribute('tt-copy', '');

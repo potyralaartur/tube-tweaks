@@ -81,9 +81,9 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
       </tp-yt-paper-listbox></div></ytd-comments-header-renderer>
       <ytd-item-section-renderer><div id="contents">
         ${thread('c5', '5')}${thread('c1200', '1.2K', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT', '6 hours ago')}${thread('c30', '30')}${thread('c0', '')}
-        ${thread('copy', '24', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT ....', '5 hours ago')}
+        ${thread('copy', '2.5K', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT ....', '5 hours ago')}
         ${thread('short1', '', 'Ferrari being Ferrari!!', '2 hours ago')}${thread('short2', '3', 'ferrari being ferrari', '1 hour ago')}
-        ${thread('real1', '40', 'This was honestly the best race of the whole year', '3 hours ago')}${thread('real2', '35', 'This was honestly the best race of the whole year!', '2 hours ago')}
+        ${thread('real1', '40', 'This was honestly the best race of the whole year', '2 weeks ago')}${thread('real2', '2K', 'This was honestly the best race of the whole year!', '2 weeks ago')}
         ${thread('again', '30', 'comment c30', '1 day ago', 'c30')}
         <ytd-continuation-item-renderer id="cont"></ytd-continuation-item-renderer>
       </div></ytd-item-section-renderer>

@@ -79,11 +79,11 @@ check('Selected state is only on the menu item, not doubled inside it', await w.
 await w.evaluate(() => { document.querySelector('#sort-menu tp-yt-paper-listbox').focus(); document.querySelector('#sort-top').focus(); document.querySelector('#sort-top tp-yt-paper-item').focus(); });
 await w.waitForTimeout(100);
 check('Opening the menu focuses "Most popular", not "Top"', await w.evaluate(() => !!document.activeElement?.closest('.tt-sort-item')));
-check('Copied comment hidden, original and short repeats kept', await w.evaluate(() => {
+check('Newer copy hidden even with more likes; original and short repeats kept', await w.evaluate(() => {
   const shown = id => getComputedStyle(document.getElementById(id)).display !== 'none';
   return !shown('copy') && shown('c1200') && shown('short1') && shown('short2');
 }));
-check('Equally liked matching comments both stay', await w.evaluate(() => ['real1', 'real2'].every(id => getComputedStyle(document.getElementById(id)).display !== 'none')));
+check('Matching comments posted at the same shown time both stay', await w.evaluate(() => ['real1', 'real2'].every(id => getComputedStyle(document.getElementById(id)).display !== 'none')));
 check('The same comment shown twice is hidden once', await w.evaluate(() => getComputedStyle(document.getElementById('again')).display === 'none' && getComputedStyle(document.getElementById('c30')).display !== 'none'));
 const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].filter(e => getComputedStyle(e).display !== 'none' && !/^(short|real)/.test(e.id))
   .sort((a, b) => (+getComputedStyle(a).order) - (+getComputedStyle(b).order)).map(e => e.id));
