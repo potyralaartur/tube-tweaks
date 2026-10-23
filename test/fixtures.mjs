@@ -27,7 +27,9 @@ export const channels = {
   contents: { channelRenderer: { channelId: 'UCsub2', title: { simpleText: 'Sub Two' }, navigationEndpoint: { browseEndpoint: { canonicalBaseUrl: '/channel/UCsub2' } } } },
 };
 
-const thread = (id, likes) => `<ytd-comment-thread-renderer id="${id}"><div id="comment"><span id="vote-count-middle">${likes}</span></div></ytd-comment-thread-renderer>`;
+const thread = (id, likes, text = `comment ${id}`, time = '1 day ago') => `<ytd-comment-thread-renderer id="${id}"><ytd-comment-view-model id="comment">
+  <span id="published-time-text"><a href="#">${time}</a></span><div id="expander"><yt-attributed-string id="content-text"><span>${text}</span></yt-attributed-string></div>
+  <span id="vote-count-middle">${likes}</span></ytd-comment-view-model></ytd-comment-thread-renderer>`;
 
 // Same structure as YouTube's yt-dropdown-menu items (Oct 2026).
 const sortItem = (id, title, subtitle, selected) => `<a id="${id}" class="yt-simple-endpoint style-scope yt-dropdown-menu${selected ? ' iron-selected' : ''}" aria-selected="${selected}" tabindex="0">
@@ -78,7 +80,9 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
         <dom-repeat id="repeat"><template></template></dom-repeat>
       </tp-yt-paper-listbox></div></ytd-comments-header-renderer>
       <ytd-item-section-renderer><div id="contents">
-        ${thread('c5', '5')}${thread('c1200', '1.2K')}${thread('c30', '30')}${thread('c0', '')}
+        ${thread('c5', '5')}${thread('c1200', '1.2K', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT', '6 hours ago')}${thread('c30', '30')}${thread('c0', '')}
+        ${thread('copy', '24', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT ....', '5 hours ago')}
+        ${thread('short1', '', 'First!!', '2 hours ago')}${thread('short2', '', 'first', '1 hour ago')}
         <ytd-continuation-item-renderer id="cont"></ytd-continuation-item-renderer>
       </div></ytd-item-section-renderer>
     </ytd-comments>

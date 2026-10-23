@@ -9,6 +9,7 @@
     hideSleepTimer: true, // Sleep timer item in the player's settings menu
     popularSort: true,
     defaultSort: 'popular', // 'top' | 'newest' | 'popular'
+    hideCopies: true, // comments that repeat an earlier comment word for word (spam bots)
     miniPlayer: true,
     hideShorts: true,
     hideLowViews: true,

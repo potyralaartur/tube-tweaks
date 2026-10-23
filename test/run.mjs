@@ -79,7 +79,11 @@ check('Selected state is only on the menu item, not doubled inside it', await w.
 await w.evaluate(() => { document.querySelector('#sort-menu tp-yt-paper-listbox').focus(); document.querySelector('#sort-top').focus(); document.querySelector('#sort-top tp-yt-paper-item').focus(); });
 await w.waitForTimeout(100);
 check('Opening the menu focuses "Most popular", not "Top"', await w.evaluate(() => !!document.activeElement?.closest('.tt-sort-item')));
-const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')]
+check('Copied comment hidden, original and short repeats kept', await w.evaluate(() => {
+  const shown = id => getComputedStyle(document.getElementById(id)).display !== 'none';
+  return !shown('copy') && shown('c1200') && shown('short1') && shown('short2');
+}));
+const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].filter(e => getComputedStyle(e).display !== 'none' && !e.id.startsWith('short'))
   .sort((a, b) => (+getComputedStyle(a).order) - (+getComputedStyle(b).order)).map(e => e.id));
 check('Comments ordered by likes (default sort)', JSON.stringify(order) === JSON.stringify(['c1200', 'c30', 'c5', 'c0', 'cont']), JSON.stringify(order));
 await w.click('#sort-new');

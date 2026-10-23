@@ -4,7 +4,7 @@
   'use strict';
 
   const root = document.documentElement;
-  const { parseCount, VIEW_WORDS, LIVE_WORDS } = window.TTNumbers;
+  const { parseCount, parseAge, VIEW_WORDS, LIVE_WORDS } = window.TTNumbers;
   let S = window.TTSettings.normalize(null);
   let ready = false;
 
@@ -314,6 +314,35 @@
     threads.forEach((t, rank) => { const o = String(rank); if (t.el.style.order !== o) t.el.style.order = o; });
   }
 
+  // ---------- Copied comments (spam bots reposting popular comments) ----------
+  // Top-level comments with the same text, ignoring case, punctuation, emoji and spacing, are one
+  // group. The oldest is the original (then the most liked, then the first shown); the rest are hidden.
+  const MIN_COPY_LENGTH = 15;
+  const normalizeComment = text => text.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+
+  function markCopies() {
+    const threads = isWatch() ? [...document.querySelectorAll('ytd-comments ytd-item-section-renderer #contents > ytd-comment-thread-renderer')] : [];
+    const groups = new Map();
+    for (const el of threads) {
+      const textEl = el.querySelector('#comment #content-text, #content-text');
+      const key = textEl ? normalizeComment(textEl.textContent) : '';
+      if (key.length < MIN_COPY_LENGTH) continue;
+      const pinned = !!el.querySelector('#pinned-comment-badge ytd-pinned-comment-badge-renderer');
+      const age = parseAge(el.querySelector('#published-time-text')?.textContent);
+      const item = { el, pinned, age: age ?? -1, likes: likeCount(el) };
+      if (groups.has(key)) groups.get(key).push(item); else groups.set(key, [item]);
+    }
+    const copies = new Set();
+    for (const items of groups.values()) {
+      if (items.length < 2) continue;
+      // Stable sort keeps DOM order as the last tie-break.
+      items.sort((a, b) => (b.pinned - a.pinned) || (b.age - a.age) || (b.likes - a.likes));
+      items.slice(1).forEach(i => copies.add(i.el));
+    }
+    for (const el of document.querySelectorAll('ytd-comment-thread-renderer[tt-copy]')) if (!copies.has(el)) el.removeAttribute('tt-copy');
+    for (const el of copies) if (!el.hasAttribute('tt-copy')) el.setAttribute('tt-copy', '');
+  }
+
   // ---------- Mini player while reading comments ----------
   let miniOn = false, miniDismissed = false;
 
@@ -435,6 +464,7 @@
     filterHome();
     setupComments();
     sortComments();
+    markCopies();
     updateMini();
     rewriteMenuBadges();
     markSleepTimer();
@@ -467,6 +497,7 @@
     if (S.cinemaMode) setWideCookie(); else setCinemaPending(false);
     root.toggleAttribute('tt-hide-ambient', S.hideAmbient);
     root.toggleAttribute('tt-hide-sleep-timer', S.hideSleepTimer);
+    root.toggleAttribute('tt-hide-copies', S.hideCopies);
     root.toggleAttribute('tt-hide-shorts', S.hideShorts);
     root.toggleAttribute('tt-hide-low-views', S.hideLowViews);
     root.setAttribute('tt-settings', JSON.stringify(S));
