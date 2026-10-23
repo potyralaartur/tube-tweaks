@@ -197,17 +197,9 @@
     return null;
   }
 
-  async function fetchSubscriptions() {
-    try {
-      const cached = JSON.parse(localStorage.getItem(SUBS_CACHE) || 'null');
-      if (cached && Date.now() - cached.t < SUBS_TTL) return cached;
-    } catch {}
-
-    for (let i = 0; i < 40 && !(window.ytcfg && window.ytcfg.get && window.ytcfg.get('INNERTUBE_CONTEXT')); i++) await sleep(250);
+  // Calls YouTube's own API the way the page does (signed in when the user is).
+  async function innertube(endpoint, body) {
     const cfg = window.ytcfg;
-    if (!cfg || !cfg.get) return null;
-    if (!cfg.get('LOGGED_IN')) return { t: Date.now(), loggedIn: false, ids: [], urls: [], names: [] };
-
     const context = cfg.get('INNERTUBE_CONTEXT');
     const key = cfg.get('INNERTUBE_API_KEY');
     const headers = {
@@ -219,15 +211,27 @@
     };
     const pageId = cfg.get('DELEGATED_SESSION_ID');
     if (pageId) headers['X-Goog-PageId'] = pageId;
-    const call = async (endpoint, body) => {
-      const auth = await sapisidHash();
-      const res = await fetch(`/youtubei/v1/${endpoint}?prettyPrint=false${key ? '&key=' + key : ''}`, {
-        method: 'POST', credentials: 'include', headers: auth ? { ...headers, Authorization: auth } : headers,
-        body: JSON.stringify({ context, ...body }),
-      });
-      if (!res.ok) throw new Error('innertube ' + res.status);
-      return res.json();
-    };
+    const auth = await sapisidHash();
+    const res = await fetch(`/youtubei/v1/${endpoint}?prettyPrint=false${key ? '&key=' + key : ''}`, {
+      method: 'POST', credentials: 'include', headers: auth ? { ...headers, Authorization: auth } : headers,
+      body: JSON.stringify({ context, ...body }),
+    });
+    if (!res.ok) throw new Error('innertube ' + res.status);
+    return res.json();
+  }
+
+  async function fetchSubscriptions() {
+    try {
+      const cached = JSON.parse(localStorage.getItem(SUBS_CACHE) || 'null');
+      if (cached && Date.now() - cached.t < SUBS_TTL) return cached;
+    } catch {}
+
+    for (let i = 0; i < 40 && !(window.ytcfg && window.ytcfg.get && window.ytcfg.get('INNERTUBE_CONTEXT')); i++) await sleep(250);
+    const cfg = window.ytcfg;
+    if (!cfg || !cfg.get) return null;
+    if (!cfg.get('LOGGED_IN')) return { t: Date.now(), loggedIn: false, ids: [], urls: [], names: [] };
+
+    const call = innertube;
 
     const out = { ids: new Set(), urls: new Set(), names: new Set() };
     try { collectChannels(await call('guide', {}), out, false); } catch {}
@@ -258,6 +262,61 @@
     subsPromise.then(subs => {
       document.dispatchEvent(new CustomEvent('tt-subs', { detail: JSON.stringify(subs) }));
     });
+  });
+
+  // ---------- Exact comment order (to settle copies that show the same time) ----------
+  // YouTube's "Newest" list is in exact posting order. It is read page by page from the start
+  // (newest first), only when content.js asks about specific comments, and at most MAX_ORDER_PAGES
+  // pages per video. A comment not in the part read is older than every comment that is.
+  const MAX_ORDER_PAGES = 15;
+  let order = null; // { vid, ids: [], wanted: Set, token, pages, done, busy }
+
+  function newestToken() {
+    const header = document.querySelector('ytd-comments ytd-comments-header-renderer');
+    const data = header && (header.data || header.polymerController?.data || header.__data?.data);
+    const items = data?.sortMenu?.sortFilterSubMenuRenderer?.subMenuItems;
+    // YouTube's own order is [Top, Newest]; titles are localized.
+    return items?.[1]?.serviceEndpoint?.continuationCommand?.token || null;
+  }
+
+  function readOrderPage(json) {
+    const ids = [];
+    let next = null;
+    for (const ep of json?.onResponseReceivedEndpoints || []) {
+      const items = (ep.reloadContinuationItemsCommand || ep.appendContinuationItemsAction)?.continuationItems || [];
+      for (const it of items) {
+        const id = it.commentThreadRenderer?.commentViewModel?.commentViewModel?.commentId;
+        if (id) ids.push(id);
+        const t = it.continuationItemRenderer?.continuationEndpoint?.continuationCommand?.token;
+        if (t) next = t;
+      }
+    }
+    return { ids, next };
+  }
+
+  async function extendOrder(vid, wanted) {
+    if (!order || order.vid !== vid) order = { vid, ids: [], wanted: new Set(), token: null, pages: 0, done: false, busy: false };
+    const o = order;
+    wanted.forEach(id => o.wanted.add(id));
+    if (o.busy) return; // the running read picks up the new ids
+    o.busy = true;
+    try {
+      if (!o.token && !o.pages) o.token = newestToken();
+      const missing = () => [...o.wanted].some(id => !o.ids.includes(id));
+      while (o.token && !o.done && o.pages < MAX_ORDER_PAGES && missing() && order === o) {
+        const { ids, next } = readOrderPage(await innertube('next', { continuation: o.token }));
+        o.ids.push(...ids);
+        o.pages++;
+        o.token = next;
+        if (!next) o.done = true;
+      }
+    } catch {} finally { o.busy = false; }
+    if (order === o && o.pages) {
+      document.dispatchEvent(new CustomEvent('tt-comment-order-result', { detail: JSON.stringify({ vid, ids: o.ids }) }));
+    }
+  }
+  document.addEventListener('tt-comment-order', e => {
+    try { const { vid, ids } = JSON.parse(e.detail); extendOrder(vid, ids); } catch {}
   });
 
   // ---------- Wiring ----------

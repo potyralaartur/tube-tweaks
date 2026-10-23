@@ -84,6 +84,7 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
         ${thread('copy', '2.5K', 'Now THIS is racing! That triple overtake was incredible. Max is the GOAT ....', '5 hours ago')}
         ${thread('short1', '', 'Ferrari being Ferrari!!', '2 hours ago')}${thread('short2', '3', 'ferrari being ferrari', '1 hour ago')}
         ${thread('real1', '40', 'This was honestly the best race of the whole year', '2 weeks ago')}${thread('real2', '2K', 'This was honestly the best race of the whole year!', '2 weeks ago')}
+        ${thread('tieA', '12', 'Underrated how good the pit wall strategy was today', '3 days ago')}${thread('tieB', '900', 'Underrated how good the pit wall strategy was today', '3 days ago')}
         ${thread('again', '30', 'comment c30', '1 day ago', 'c30')}
         <ytd-continuation-item-renderer id="cont"></ytd-continuation-item-renderer>
       </div></ytd-item-section-renderer>
@@ -93,6 +94,11 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
 </ytd-watch-flexy></ytd-app>
 <script>
   const flexy = document.querySelector('ytd-watch-flexy');
+  // Like YouTube: the sort menu's data carries the continuation token of the Newest list.
+  document.querySelector('ytd-comments-header-renderer').data = { sortMenu: { sortFilterSubMenuRenderer: { subMenuItems: [
+    { title: 'Top', serviceEndpoint: { continuationCommand: { token: 'TOP' } } },
+    { title: 'Newest', serviceEndpoint: { continuationCommand: { token: 'NEWEST' } } },
+  ] } } };
   // Like YouTube: the starting layout comes from ytcfg; the size button toggles it.
   if (ytcfg.get('START_IN_THEATER_MODE')) flexy.setAttribute('theater', '');
   window.sizeClicks = 0;
@@ -125,3 +131,11 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
     getPlaybackQualityLabel: () => current === 'hd1080' ? '1080p Premium' : current,
   });
 </script></body></html>`;
+
+// YouTube's Newest list, two pages: tieB was posted after tieA. real1/real2 are older than both pages.
+const orderItem = id => ({ commentThreadRenderer: { commentViewModel: { commentViewModel: { commentId: id } } } });
+const more = token => ({ continuationItemRenderer: { continuationEndpoint: { continuationCommand: { token } } } });
+export const newestPages = {
+  NEWEST: { onResponseReceivedEndpoints: [{ reloadContinuationItemsCommand: { continuationItems: [orderItem('x1'), orderItem('tieB'), more('P2')] } }] },
+  P2: { onResponseReceivedEndpoints: [{ appendContinuationItemsAction: { continuationItems: [orderItem('x2'), orderItem('tieA')] } }] },
+};

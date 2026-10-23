@@ -322,6 +322,33 @@
   // skipped: real people repeat short phrases. The same
   // comment rendered twice (YouTube sometimes re-inserts a block) is hidden as well.
   const MIN_COPY_LENGTH = 25;
+  // Exact order from YouTube's "Newest" list (read by page.js) settles copies that show the same
+  // time: newestIds is a newest-first prefix, so a comment missing from it is older than all in it.
+  let newest = { vid: null, index: new Map() }, orderAsked = new Set();
+  document.addEventListener('tt-comment-order-result', e => {
+    try {
+      const { vid, ids } = JSON.parse(e.detail);
+      if (vid !== videoId()) return;
+      newest = { vid, index: new Map(ids.map((id, i) => [id, i])) };
+      schedule();
+    } catch {}
+  });
+  function askOrder(ids) {
+    const vid = videoId();
+    if (newest.vid !== vid) { newest = { vid, index: new Map() }; orderAsked = new Set(); }
+    const fresh = ids.filter(id => !orderAsked.has(id));
+    if (!fresh.length) return;
+    fresh.forEach(id => orderAsked.add(id));
+    document.dispatchEvent(new CustomEvent('tt-comment-order', { detail: JSON.stringify({ vid, ids: [...orderAsked] }) }));
+  }
+  // The first posted among comments that show the same time, or null if the order isn't known.
+  function firstPosted(items) {
+    if (newest.vid !== videoId() || !newest.index.size) return null;
+    const unseen = items.filter(i => !newest.index.has(i.id));
+    if (unseen.length === 1) return unseen[0];
+    if (unseen.length > 1) return null;
+    return items.reduce((a, b) => (newest.index.get(b.id) > newest.index.get(a.id) ? b : a));
+  }
   const commentId = el => (el.querySelector('#comment #published-time-text a, #published-time-text a')?.getAttribute('href') || '').match(/[?&]lc=([^&]+)/)?.[1] || null;
   const normalizeComment = text => text.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
 
@@ -338,15 +365,21 @@
       if (key.length < MIN_COPY_LENGTH) continue;
       const pinned = !!el.querySelector('#pinned-comment-badge ytd-pinned-comment-badge-renderer');
       const age = parseAge(el.querySelector('#comment #published-time-text, #published-time-text')?.textContent);
-      const item = { el, pinned, age: age ?? -1, likes: likeCount(el) };
+      const item = { el, id, pinned, age: age ?? -1 };
       if (groups.has(key)) groups.get(key).push(item); else groups.set(key, [item]);
     }
     for (const items of groups.values()) {
       if (items.length < 2) continue;
       // Stable sort keeps DOM order as the last tie-break.
       items.sort((a, b) => (b.pinned - a.pinned) || (b.age - a.age));
-      const original = items[0];
-      for (const i of items.slice(1)) if (i.age >= 0 && original.age > i.age) copies.add(i.el);
+      const top = items[0];
+      // Copies posted later than the oldest shown time are hidden right away.
+      for (const i of items) if (i !== top && i.age >= 0 && top.age > i.age && !i.pinned) copies.add(i.el);
+      const tied = items.filter(i => i.age === top.age && i.pinned === top.pinned);
+      if (tied.length < 2 || top.pinned) continue;
+      const first = tied.every(i => i.id) ? firstPosted(tied) : null;
+      if (first) tied.forEach(i => { if (i !== first) copies.add(i.el); });
+      else if (tied.every(i => i.id)) askOrder(tied.map(i => i.id));
     }
     for (const el of document.querySelectorAll('ytd-comment-thread-renderer[tt-copy]')) if (!copies.has(el)) el.removeAttribute('tt-copy');
     for (const el of copies) if (!el.hasAttribute('tt-copy')) el.setAttribute('tt-copy', '');
