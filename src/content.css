@@ -1,0 +1,151 @@
+/* Tube Tweaks: every rule is gated by an attribute the content script sets on <html>,
+   so turning a setting off in the popup undoes it immediately. */
+
+/* ---------- Hide Shorts on Home ---------- */
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] ytd-rich-section-renderer:has(ytd-rich-shelf-renderer[is-shorts]),
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] ytd-rich-section-renderer:has(ytm-shorts-lockup-view-model),
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] ytd-rich-section-renderer:has(ytm-shorts-lockup-view-model-v2),
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] ytd-rich-shelf-renderer[is-shorts],
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] ytd-reel-shelf-renderer,
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] grid-shelf-view-model:has(ytm-shorts-lockup-view-model),
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] ytd-rich-item-renderer:has(a[href^="/shorts/"]),
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] ytd-rich-item-renderer[is-slim-media],
+html[tt-hide-shorts] ytd-browse[page-subtype="home"] yt-chip-cloud-chip-renderer:has(a[href^="/shorts"]) {
+  display: none !important;
+}
+
+/* ---------- Player settings menu: hide Ambient mode / Sleep timer ---------- */
+/* Matched by icon (same in every language; modern and legacy icon sets), with label fallbacks:
+   Ambient mode carries its label in aria-label; Sleep timer is marked by the content script. */
+html[tt-hide-ambient] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M12 .5C11.73 .5 11.48"]),
+html[tt-hide-ambient] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M21 7v10H3V7h18m1-1H2v12h20V6z"]),
+html[tt-hide-ambient] #movie_player .ytp-menuitem[role="menuitemcheckbox"][aria-label="Ambient mode" i],
+html[tt-hide-ambient] #movie_player .ytp-menuitem[role="menuitemcheckbox"][aria-label="Cinematic lighting" i],
+html[tt-hide-ambient] #movie_player .ytp-menuitem[role="menuitemcheckbox"][aria-label="Oświetlenie kinowe" i],
+html[tt-hide-sleep-timer] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M12.33 1.00C12.22 1.00"]),
+html[tt-hide-sleep-timer] #movie_player .ytp-menuitem:has(> .ytp-menuitem-icon path[d^="M16.67,4.31C19.3,5.92"]),
+html[tt-hide-sleep-timer] #movie_player .ytp-menuitem[tt-sleep-timer] {
+  display: none !important;
+}
+
+/* ---------- Cinema mode: keep the default layout invisible until theater view is on ---------- */
+html[tt-cinema-pending] ytd-watch-flexy:not([theater]):not([fullscreen]) { visibility: hidden !important; }
+/* While a watch page loads, YouTube first shows a skeleton and an early player sized for the default
+   layout (outside ytd-watch-flexy). Hide them and show a black box where the theater player will be. */
+html[tt-cinema-pending] body > #player,
+html[tt-cinema-pending] #watch-page-skeleton { visibility: hidden !important; }
+html[tt-cinema-pending] body:has(> #watch-page-skeleton)::before {
+  content: ''; position: fixed; z-index: 1; left: 0; right: 0; top: 56px;
+  height: min(56.25vw, max(480px, 100vh - 169px)); background: #000; pointer-events: none;
+}
+/* If the switch still has to happen with a click, skip YouTube's resize animation. */
+html[tt-cinema-pending]::view-transition-group(*),
+html[tt-cinema-pending]::view-transition-old(*),
+html[tt-cinema-pending]::view-transition-new(*) { animation: none !important; }
+
+/* ---------- Hide low-view videos (marked by the content script) ---------- */
+html[tt-hide-low-views] ytd-browse[page-subtype="home"] ytd-rich-item-renderer[tt-low-views] {
+  display: none !important;
+}
+
+/* ---------- Mini player while reading comments ---------- */
+html[tt-mini] #movie_player {
+  position: fixed !important;
+  left: var(--tt-mini-left, calc(100vw - 416px)) !important;
+  bottom: 16px !important;
+  right: auto !important;
+  top: auto !important;
+  width: var(--tt-mini-w, 400px) !important;
+  height: calc(var(--tt-mini-w, 400px) * 9 / 16) !important;
+  z-index: 2300 !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5) !important;
+  background: #000 !important;
+}
+html[tt-mini] #movie_player .html5-video-container,
+html[tt-mini] #movie_player video.html5-main-video {
+  width: 100% !important;
+  height: 100% !important;
+  left: 0 !important;
+  top: 0 !important;
+  object-fit: contain !important;
+}
+#tt-mini-close {
+  display: none;
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 70; /* above the player's top and bottom chrome */
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  opacity: 0.9;
+  transition: opacity 0.1s cubic-bezier(0.4, 0, 1, 1);
+}
+#tt-mini-close:hover, #tt-mini-close:focus-visible { opacity: 1; }
+#tt-mini-close .tt-svg-fill { fill: #fff; }
+#tt-mini-close .tt-svg-shadow { fill: none; stroke: #000; stroke-opacity: 0.15; stroke-width: 2px; }
+/* Hidden with the rest of the controls while the video plays and the mouse is idle or away. */
+#movie_player.ytp-autohide #tt-mini-close,
+#movie_player:not(:hover) #tt-mini-close:not(:focus-visible) { opacity: 0; }
+html[tt-mini] #movie_player #tt-mini-close { display: block; }
+/* YouTube gives these a view-transition-name (a stacking context) in theater and default layouts. */
+html[tt-mini] ytd-watch-flexy #player-full-bleed-container,
+html[tt-mini] ytd-watch-flexy #player-container,
+html[tt-mini] [tt-mini-lift] { z-index: var(--tt-mini-lift, 2019) !important; }
+html[tt-mini] [tt-mini-lift="static"] { position: relative !important; }
+
+/* ---------- Copied comments (marked by the content script) ---------- */
+html[tt-hide-copies] ytd-comments ytd-comment-thread-renderer[tt-copy] { display: none !important; }
+
+/* ---------- "Most popular" comment sort ---------- */
+/* Our option sits last in the DOM (YouTube maps positions to its own sort options) but is shown first. */
+ytd-comments #sort-menu tp-yt-paper-listbox:has(> .tt-sort-item) {
+  display: flex !important;
+  flex-direction: column !important;
+}
+ytd-comments #sort-menu tp-yt-paper-listbox > .tt-sort-item { order: -1; }
+/* Only used if YouTube's own item can't be copied. */
+.tt-sort-fallback {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 48px;
+  padding: 8px 16px;
+  font-family: Roboto, Arial, sans-serif;
+  cursor: pointer;
+  outline: none;
+}
+.tt-sort-fallback .tt-sort-title { font-size: 1.4rem; line-height: 2rem; color: var(--yt-spec-text-primary); }
+.tt-sort-fallback .tt-sort-desc { font-size: 1.2rem; line-height: 1.8rem; color: var(--yt-spec-text-secondary); }
+.tt-sort-fallback:hover,
+.tt-sort-fallback:focus-visible,
+.tt-sort-fallback.iron-selected { background: var(--yt-spec-10-percent-layer, rgba(127, 127, 127, 0.1)); }
+html[tt-popular-active] ytd-comments ytd-item-section-renderer #contents {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* ---------- 2K badge for 1440p ---------- */
+/* YouTube draws its HD/4K/8K badge as ::after on the gear (13x9, #e1002d, 1px radius) with
+   1px pixel-art glyphs and a 64.7% black shadow. YouTube tags 1440p as HD; for 1440p we swap
+   only the glyph artwork for a 2K drawn on the same grid with YouTube's own "K"
+   (source art: assets/badge-2k.svg). Size, position and colour stay YouTube's. */
+#movie_player[tt-2k] .ytp-settings-button.ytp-hd-quality-badge::after {
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMyA5Ij48cGF0aCBmaWxsLW9wYWNpdHk9Ii42NDciIGQ9Ik0zIDNoMXYxSDN6TTQgM2gxdjFINHpNMiA0aDF2MUgyek01IDRoMXYxSDV6TTEwIDRoMXYxSDEwek00IDVoMXYxSDR6TTggNWgxdjFIOHpNOSA1aDF2MUg5ek0yIDdoMXYxSDJ6TTMgN2gxdjFIM3pNNCA3aDF2MUg0ek01IDdoMXYxSDV6TTcgN2gxdjFIN3pNMTAgN2gxdjFIMTB6Ii8+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTMgMmgxdjFIM3pNNCAyaDF2MUg0ek03IDJoMXYxSDd6TTEwIDJoMXYxSDEwek0yIDNoMXYxSDJ6TTUgM2gxdjFINXpNNyAzaDF2MUg3ek0xMCAzaDF2MUgxMHpNNCA0aDF2MUg0ek03IDRoMXYxSDd6TTggNGgxdjFIOHpNOSA0aDF2MUg5ek0zIDVoMXYxSDN6TTcgNWgxdjFIN3pNMTAgNWgxdjFIMTB6TTIgNmgxdjFIMnpNMyA2aDF2MUgzek00IDZoMXYxSDR6TTUgNmgxdjFINXpNNyA2aDF2MUg3ek0xMCA2aDF2MUgxMHoiLz48L3N2Zz4=) !important;
+}
+#movie_player.ytp-color-white[tt-2k] .ytp-settings-button.ytp-hd-quality-badge::after {
+  background-image: url(data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMyA5Ij48cGF0aCBkPSJNMyAyaDF2MUgzek00IDJoMXYxSDR6TTcgMmgxdjFIN3pNMTAgMmgxdjFIMTB6TTIgM2gxdjFIMnpNNSAzaDF2MUg1ek03IDNoMXYxSDd6TTEwIDNoMXYxSDEwek00IDRoMXYxSDR6TTcgNGgxdjFIN3pNOCA0aDF2MUg4ek05IDRoMXYxSDl6TTMgNWgxdjFIM3pNNyA1aDF2MUg3ek0xMCA1aDF2MUgxMHpNMiA2aDF2MUgyek0zIDZoMXYxSDN6TTQgNmgxdjFINHpNNSA2aDF2MUg1ek03IDZoMXYxSDd6TTEwIDZoMXYxSDEweiIvPjwvc3ZnPg==) !important;
+}
+/* Full screen ("big mode") YouTube uses text instead of artwork. */
+#movie_player.ytp-big-mode[tt-2k] .ytp-settings-button.ytp-hd-quality-badge::after {
+  background-image: none !important;
+  content: "2K" !important;
+}
+
+/* Hide the settings menu while the extension picks 1080p Premium through it. */
+html[tt-menu-busy] #movie_player .ytp-settings-menu { opacity: 0 !important; pointer-events: none !important; }
