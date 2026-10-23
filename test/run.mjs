@@ -83,7 +83,9 @@ check('Copied comment hidden, original and short repeats kept', await w.evaluate
   const shown = id => getComputedStyle(document.getElementById(id)).display !== 'none';
   return !shown('copy') && shown('c1200') && shown('short1') && shown('short2');
 }));
-const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].filter(e => getComputedStyle(e).display !== 'none' && !e.id.startsWith('short'))
+check('Equally liked matching comments both stay', await w.evaluate(() => ['real1', 'real2'].every(id => getComputedStyle(document.getElementById(id)).display !== 'none')));
+check('The same comment shown twice is hidden once', await w.evaluate(() => getComputedStyle(document.getElementById('again')).display === 'none' && getComputedStyle(document.getElementById('c30')).display !== 'none'));
+const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].filter(e => getComputedStyle(e).display !== 'none' && !/^(short|real)/.test(e.id))
   .sort((a, b) => (+getComputedStyle(a).order) - (+getComputedStyle(b).order)).map(e => e.id));
 check('Comments ordered by likes (default sort)', JSON.stringify(order) === JSON.stringify(['c1200', 'c30', 'c5', 'c0', 'cont']), JSON.stringify(order));
 await w.click('#sort-new');
