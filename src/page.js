@@ -12,6 +12,37 @@
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const player = () => document.getElementById('movie_player');
 
+  // ---------- Cinema mode: start the page in theater view ----------
+  // YouTube picks the starting layout from ytcfg START_IN_THEATER_MODE, which its server now sends
+  // as false for some accounts even with the theater cookie set. Trapping window.ytcfg before
+  // YouTube's inline scripts run makes the page render in theater view from the first frame, with
+  // no switch at all. content.js still clicks the size button if this ever stops working.
+  let cinemaStart = false;
+  try { cinemaStart = localStorage.getItem('tt-cinema') === '1'; } catch {}
+  if (cinemaStart && !('ytcfg' in window)) {
+    const KEY = 'START_IN_THEATER_MODE';
+    const wrapped = new WeakSet();
+    const wrapCfg = cfg => {
+      if (!cfg || typeof cfg !== 'object' || wrapped.has(cfg)) return;
+      wrapped.add(cfg);
+      let set = cfg.set, get = cfg.get;
+      const setW = function (k, v) {
+        if (typeof k === 'string') return set.call(this, k, k === KEY ? true : v);
+        if (k && typeof k === 'object' && KEY in k) k[KEY] = true;
+        return set.apply(this, arguments);
+      };
+      const getW = function (k) { const r = get.apply(this, arguments); return k === KEY ? true : r; };
+      Object.defineProperty(cfg, 'set', { configurable: true, enumerable: true, get: () => set && setW, set: fn => { set = fn; } });
+      Object.defineProperty(cfg, 'get', { configurable: true, enumerable: true, get: () => get && getW, set: fn => { get = fn; } });
+    };
+    let ytcfg;
+    Object.defineProperty(window, 'ytcfg', {
+      configurable: true, enumerable: true,
+      get: () => ytcfg,
+      set: v => { ytcfg = v; wrapCfg(v); },
+    });
+  }
+
   function readSettings() {
     try { settings = JSON.parse(root.getAttribute('tt-settings') || 'null'); } catch { settings = null; }
   }

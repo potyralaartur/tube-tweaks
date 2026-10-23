@@ -46,6 +46,7 @@ w.on('pageerror', e => errors.push(e.message));
 await w.goto('https://www.youtube.com/watch?v=abc');
 await w.waitForTimeout(2000);
 check('Cinema mode switched on', await w.evaluate(() => document.querySelector('ytd-watch-flexy').hasAttribute('theater')));
+check('Page starts in theater view itself (no switch)', await w.evaluate(() => window.sizeClicks === 0), String(await w.evaluate(() => window.sizeClicks)));
 check('Watch page is visible once theater is on', await w.evaluate(() => !document.documentElement.hasAttribute('tt-cinema-pending') && getComputedStyle(document.querySelector('ytd-watch-flexy')).visibility === 'visible'));
 await w.evaluate(() => document.querySelector('.ytp-size-button').click()); // the user leaves theater view
 await w.waitForTimeout(1500);

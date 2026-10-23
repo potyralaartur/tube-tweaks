@@ -30,6 +30,10 @@ html[tt-hide-sleep-timer] #movie_player .ytp-menuitem[tt-sleep-timer] {
 
 /* ---------- Cinema mode: keep the default layout invisible until theater view is on ---------- */
 html[tt-cinema-pending] ytd-watch-flexy:not([theater]):not([fullscreen]) { visibility: hidden !important; }
+/* If the switch still has to happen with a click, skip YouTube's resize animation. */
+html[tt-cinema-pending]::view-transition-group(*),
+html[tt-cinema-pending]::view-transition-old(*),
+html[tt-cinema-pending]::view-transition-new(*) { animation: none !important; }
 
 /* ---------- Hide low-view videos (marked by the content script) ---------- */
 html[tt-hide-low-views] ytd-browse[page-subtype="home"] ytd-rich-item-renderer[tt-low-views] {
