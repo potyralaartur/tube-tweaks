@@ -8,6 +8,18 @@ const item = (id, channelHref, views) => `
     <div id="metadata-line"><span class="inline-metadata-item">${views}</span><span class="inline-metadata-item">2 days ago</span></div>
   </ytd-rich-item-renderer>`;
 
+// Newer tile (Oct 2026): a play icon and a bare number, with the words only in aria-label.
+const lockup = (id, channelHref, views) => `
+  <ytd-rich-item-renderer id="${id}"><yt-lockup-view-model>
+    <a href="/watch?v=${id}">title ${id}</a>
+    <yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow">
+      <a href="${channelHref}">${channelHref.slice(2)}</a>
+      <span class="ytContentMetadataViewModelLeadingIcon" aria-hidden="true"><svg></svg></span>
+      <span class="ytContentMetadataViewModelMetadataText" role="text" aria-label="${views}">${views.split(' ')[0]}</span>
+      <span class="ytContentMetadataViewModelMetadataText" role="text" aria-label="8 hours ago">8 hr ago</span>
+    </div></yt-content-metadata-view-model>
+  </yt-lockup-view-model></ytd-rich-item-renderer>`;
+
 export const home = `<!doctype html><html><head>${ytcfg}</head><body>
 <ytd-app><ytd-browse page-subtype="home"><div id="contents">
   <ytd-rich-section-renderer id="shorts-shelf"><ytd-rich-shelf-renderer is-shorts>Shorts</ytd-rich-shelf-renderer></ytd-rich-section-renderer>
@@ -15,6 +27,7 @@ export const home = `<!doctype html><html><head>${ytcfg}</head><body>
   ${item('random-low', '/@random', '120 views')}
   ${item('random-high', '/@random', '1.2K views')}
   ${item('subbed-by-id', '/channel/UCsub2', '50 views')}
+  ${lockup('icon-low', '/@random', '569 views')}${lockup('icon-high', '/@random', '5,690 views')}${lockup('icon-live', '/@random', '53 watching')}
   <ytd-rich-item-renderer id="short-tile"><a href="/shorts/xyz">short</a></ytd-rich-item-renderer>
 </div></ytd-browse></ytd-app></body></html>`;
 
@@ -55,6 +68,8 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
 #player-container-outer{position:relative;view-transition-name:player-resize}
 #columns{display:flex} #primary{flex:1} #secondary{width:426px;padding-right:24px}
 .related{position:relative;z-index:1;height:3000px;background:#333}</style></head><body>
+<div id="watch-page-skeleton" style="position:absolute;top:56px;left:0;width:10px;height:10px"></div>
+<div id="player" style="position:absolute;top:80px;left:24px"><div id="player-wrap"></div></div><!-- by the time the test looks, YouTube has moved the early player into ytd-watch-flexy -->
 <ytd-app><div id="masthead-container"></div><ytd-watch-flexy>
   <div id="player-container-outer"><div id="movie_player" class="html5-video-player">
     <video class="html5-main-video"></video>

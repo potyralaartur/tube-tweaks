@@ -88,13 +88,14 @@
       const m = path.toLowerCase().match(/^\/(@[^/]+|channel\/[^/]+)/);
       if (m) { channel = '/' + m[1]; break; }
     }
-    const nameEl = item.querySelector('ytd-channel-name #text, ytd-channel-name a, .yt-content-metadata-view-model-wiz__metadata-row a, .yt-content-metadata-view-model__metadata-row a');
+    const nameEl = item.querySelector('ytd-channel-name #text, ytd-channel-name a, .yt-content-metadata-view-model-wiz__metadata-row a, .yt-content-metadata-view-model__metadata-row a, .ytContentMetadataViewModelMetadataRow a');
     const name = nameEl ? nameEl.textContent.trim() : null;
 
     let views = null, live = false;
-    const texts = item.querySelectorAll('#metadata-line span, .inline-metadata-item, .yt-content-metadata-view-model-wiz__metadata-text, .yt-content-metadata-view-model__metadata-text, span.yt-core-attributed-string');
+    const texts = item.querySelectorAll('#metadata-line span, .inline-metadata-item, .yt-content-metadata-view-model-wiz__metadata-text, .yt-content-metadata-view-model__metadata-text, .ytContentMetadataViewModelMetadataText, span.yt-core-attributed-string');
     for (const el of texts) {
-      for (const part of el.textContent.split('•')) {
+      // Newer tiles show a play icon and a bare number ("▷ 569"); the words are in aria-label.
+      for (const part of (el.getAttribute('aria-label') || el.textContent).split('•')) {
         if (LIVE_WORDS.test(part)) live = true;
         else if (views === null && VIEW_WORDS.test(part)) views = parseCount(part);
       }

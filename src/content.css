@@ -30,6 +30,14 @@ html[tt-hide-sleep-timer] #movie_player .ytp-menuitem[tt-sleep-timer] {
 
 /* ---------- Cinema mode: keep the default layout invisible until theater view is on ---------- */
 html[tt-cinema-pending] ytd-watch-flexy:not([theater]):not([fullscreen]) { visibility: hidden !important; }
+/* While a watch page loads, YouTube first shows a skeleton and an early player sized for the default
+   layout (outside ytd-watch-flexy). Hide them and show a black box where the theater player will be. */
+html[tt-cinema-pending] body > #player,
+html[tt-cinema-pending] #watch-page-skeleton { visibility: hidden !important; }
+html[tt-cinema-pending] body:has(> #watch-page-skeleton)::before {
+  content: ''; position: fixed; z-index: 1; left: 0; right: 0; top: 56px;
+  height: min(56.25vw, max(480px, 100vh - 169px)); background: #000; pointer-events: none;
+}
 /* If the switch still has to happen with a click, skip YouTube's resize animation. */
 html[tt-cinema-pending]::view-transition-group(*),
 html[tt-cinema-pending]::view-transition-old(*),
