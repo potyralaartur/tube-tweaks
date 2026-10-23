@@ -1,7 +1,7 @@
 // Loads the unpacked extension in Chromium and runs it against fake YouTube pages.
 // Usage: node test/run.mjs   (needs Playwright; set CHROME to a Chromium binary if needed)
 import { chromium } from 'playwright';
-import { home, watch, guide, channels } from './fixtures.mjs';
+import { home, watch, guide, channels, newestPages } from './fixtures.mjs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import os from 'node:os';
@@ -14,11 +14,17 @@ const ctx = await chromium.launchPersistentContext(profile, {
   executablePath: process.env.CHROME || undefined,
   args: ['--headless=new', `--disable-extensions-except=${ext}`, `--load-extension=${ext}`],
 });
+const nextCalls = [];
 await ctx.route('https://www.youtube.com/**', route => {
   const url = new URL(route.request().url());
   const json = body => route.fulfill({ contentType: 'application/json', body: JSON.stringify(body) });
   if (url.pathname === '/youtubei/v1/guide') return json(guide);
   if (url.pathname === '/youtubei/v1/browse') return json(JSON.parse(route.request().postData()).browseId === 'FEchannels' ? channels : {});
+  if (url.pathname === '/youtubei/v1/next') {
+    const token = JSON.parse(route.request().postData()).continuation;
+    nextCalls.push(token);
+    return json(newestPages[token] || {});
+  }
   if (url.pathname === '/watch') return route.fulfill({ contentType: 'text/html', body: watch });
   return route.fulfill({ contentType: 'text/html', body: home });
 });
@@ -83,9 +89,12 @@ check('Newer copy hidden even with more likes; original and short repeats kept',
   const shown = id => getComputedStyle(document.getElementById(id)).display !== 'none';
   return !shown('copy') && shown('c1200') && shown('short1') && shown('short2');
 }));
-check('Matching comments posted at the same shown time both stay', await w.evaluate(() => ['real1', 'real2'].every(id => getComputedStyle(document.getElementById(id)).display !== 'none')));
+check('Same-time copies: the one posted first (per Newest order) stays', await w.evaluate(() =>
+  getComputedStyle(document.getElementById('tieA')).display !== 'none' && getComputedStyle(document.getElementById('tieB')).display === 'none'));
+check('Newest order is read only as far as needed', nextCalls.join() === 'NEWEST,P2', JSON.stringify(nextCalls));
+check('Same-time copies missing from the Newest order both stay', await w.evaluate(() => ['real1', 'real2'].every(id => getComputedStyle(document.getElementById(id)).display !== 'none')));
 check('The same comment shown twice is hidden once', await w.evaluate(() => getComputedStyle(document.getElementById('again')).display === 'none' && getComputedStyle(document.getElementById('c30')).display !== 'none'));
-const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].filter(e => getComputedStyle(e).display !== 'none' && !/^(short|real)/.test(e.id))
+const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].filter(e => getComputedStyle(e).display !== 'none' && !/^(short|real|tie)/.test(e.id))
   .sort((a, b) => (+getComputedStyle(a).order) - (+getComputedStyle(b).order)).map(e => e.id));
 check('Comments ordered by likes (default sort)', JSON.stringify(order) === JSON.stringify(['c1200', 'c30', 'c5', 'c0', 'cont']), JSON.stringify(order));
 await w.click('#sort-new');
