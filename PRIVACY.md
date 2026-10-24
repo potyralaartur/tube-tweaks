@@ -11,7 +11,7 @@ Tube Tweaks is a Chrome extension that changes how the YouTube website looks and
 ### Your settings
 The choices you make in the popup (preferred quality, which items to hide, the minimum view count and so on) are saved with Chrome's `chrome.storage.sync`. If Chrome sync is turned on, Chrome copies them to your other computers through your Google account, the same way it syncs your other extension settings. The developer never receives them.
 
-A few of these settings are also copied into youtube.com's local storage (`tt-cinema`, `tt-channel-videos`, `tt-hide`) so the extension can apply them before the page finishes loading. When "Always use cinema mode" is on, the extension sets YouTube's own `wide=1` cookie on youtube.com, which is how YouTube remembers theater view.
+A few of these settings are also copied into youtube.com's local storage (`tt-cinema`, `tt-channel-videos`, `tt-hide`) so the extension can apply them before the page finishes loading. When "Always use cinema mode" is on, the extension sets YouTube's own `wide=1` cookie on youtube.com, which is how YouTube remembers theater view, and it clears that cookie when you turn the setting off.
 
 ### YouTube pages you open
 To do its job the extension reads parts of the YouTube pages you visit, inside your browser:
