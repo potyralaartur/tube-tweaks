@@ -31,7 +31,7 @@ html[tt-hide-sleep-timer] #movie_player .ytp-menuitem[tt-sleep-timer] {
 /* ---------- Paid promotion label ---------- */
 /* "Includes paid promotion": YouTube's player shows it top-left for the first seconds and the
    whole banner is a link to a help page, easy to click by mistake. Hover previews reuse the player. */
-html[tt-hide-paid] .ytp-paid-content-overlay { display: none !important; }
+html[tt-hide-paid-promo] .ytp-paid-content-overlay { display: none !important; }
 
 /* ---------- Cinema mode: keep the default layout invisible until theater view is on ---------- */
 html[tt-cinema-pending] ytd-watch-flexy:not([theater]):not([fullscreen]) { visibility: hidden !important; }

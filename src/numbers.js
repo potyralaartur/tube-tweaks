@@ -44,7 +44,7 @@
   const AGE_UNITS = [
     [/^(sec|sek|seg|сек)/i, 1],
     [/^(min|мин|хв)/i, 60],
-    [/^(hour|hr|godz|stund|heure|hora|or[ae]|час|год|uur|saat)/i, 3600],
+    [/^(hour|hr|godz|stund|heure|hora|or[ae]|час|годин|uur|saat)/i, 3600],
     [/^(day|dni|dzie|tag|jour|día|dia|giorn|д[ен]|dag|gün)/i, 86400],
     [/^(week|wk|tydz|tygod|woche|semaine|semana|settiman|недел|тиж|wek|hafta)/i, 604800],
     [/^(month|mo|miesi|monat|mois|mes|mês|mese|месяц|місяц|maand|ay)/i, 2592000],
