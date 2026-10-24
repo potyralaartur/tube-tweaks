@@ -21,17 +21,22 @@
   try { cinemaStart = localStorage.getItem('tt-cinema') === '1'; } catch {}
   if (cinemaStart && !('ytcfg' in window)) {
     const KEY = 'START_IN_THEATER_MODE';
+    // Follows the setting once content.js has published it, so turning cinema mode off applies to
+    // the next video without a reload.
+    const on = () => {
+      try { const s = JSON.parse(root.getAttribute('tt-settings') || 'null'); return s ? !!s.cinemaMode : true; } catch { return true; }
+    };
     const wrapped = new WeakSet();
     const wrapCfg = cfg => {
       if (!cfg || typeof cfg !== 'object' || wrapped.has(cfg)) return;
       wrapped.add(cfg);
       let set = cfg.set, get = cfg.get;
       const setW = function (k, v) {
-        if (typeof k === 'string') return set.call(this, k, k === KEY ? true : v);
-        if (k && typeof k === 'object' && KEY in k) k[KEY] = true;
+        if (typeof k === 'string') return set.call(this, k, k === KEY && on() ? true : v);
+        if (k && typeof k === 'object' && KEY in k && on()) k[KEY] = true;
         return set.apply(this, arguments);
       };
-      const getW = function (k) { const r = get.apply(this, arguments); return k === KEY ? true : r; };
+      const getW = function (k) { const r = get.apply(this, arguments); return k === KEY && on() ? true : r; };
       Object.defineProperty(cfg, 'set', { configurable: true, enumerable: true, get: () => set && setW, set: fn => { set = fn; } });
       Object.defineProperty(cfg, 'get', { configurable: true, enumerable: true, get: () => get && getW, set: fn => { get = fn; } });
     };
@@ -329,14 +334,26 @@
     if (settings) return settings.channelVideos !== false;
     try { return localStorage.getItem('tt-channel-videos') !== '0'; } catch { return true; }
   };
+  // The endpoint belongs to the link that was clicked, so it is edited in place; edits are
+  // remembered so that link opens Home again once the setting is turned off.
+  const rewritten = new WeakMap();
   window.addEventListener('yt-navigate', e => {
     const ep = e.detail && e.detail.endpoint;
     const be = ep && ep.browseEndpoint;
-    if (!be || be.params || !/^UC/.test(be.browseId || '') || !channelVideos()) return;
+    if (!be) return;
+    if (rewritten.has(ep)) {
+      if (channelVideos()) return;
+      delete be.params;
+      ep.commandMetadata.webCommandMetadata.url = rewritten.get(ep);
+      rewritten.delete(ep);
+      return;
+    }
+    if (be.params || !/^UC/.test(be.browseId || '') || !channelVideos()) return;
     const meta = ep.commandMetadata && ep.commandMetadata.webCommandMetadata;
     if (!meta || typeof meta.url !== 'string') return;
     const [path, rest = ''] = meta.url.split(/(?=[?#])/);
     if (!/^\/(@[^/]+|channel\/UC[\w-]+|c\/[^/]+|user\/[^/]+)\/?$/.test(path)) return;
+    rewritten.set(ep, meta.url);
     be.params = VIDEOS_PARAMS;
     meta.url = path.replace(/\/$/, '') + '/videos' + rest;
   }, true);
@@ -357,7 +374,7 @@
     if (e.target instanceof HTMLVideoElement && e.target.closest('#movie_player')) scheduleQuality();
   }, true);
 
-  setInterval(updateBadge, 1000);
+  setInterval(() => { if (location.pathname === '/watch') updateBadge(); }, 1000);
   readSettings();
   scheduleQuality();
 })();

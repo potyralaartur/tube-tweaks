@@ -191,6 +191,7 @@ check('"Includes paid promotion" hidden on the player', !(await paidShown()));
 await setSettings({ hidePaidPromo: false });
 await w.waitForTimeout(600);
 check('Turning it off shows the label again', await paidShown());
+await setSettings({ hidePaidPromo: true });
 
 // Channels open on Videos
 const c = await ctx.newPage();
@@ -209,10 +210,27 @@ const navigate = () => c.evaluate(() => {
 let navs = await navigate();
 check('Channel links open the Videos tab', JSON.stringify(navs[0]) === '["/@Formula1/videos","EgZ2aWRlb3PyBgQKAjoA"]', JSON.stringify(navs));
 check('Channel tab and video links are left alone', JSON.stringify(navs.slice(1)) === '[["/@Formula1/featured","EghmZWF0dXJlZPIGBAoCMgA%3D"],["/watch?v=abc",null]]', JSON.stringify(navs));
+// The same link clicked again after the setting is turned off opens Home again.
+await c.evaluate(() => {
+  window.reused = { commandMetadata: { webCommandMetadata: { url: '/@Formula1' } }, browseEndpoint: { browseId: 'UCB_qr75' } };
+  document.body.dispatchEvent(new CustomEvent('yt-navigate', { bubbles: true, detail: { endpoint: window.reused } }));
+});
 await setSettings({ channelVideos: false });
 await c.waitForTimeout(400);
+const reused = await c.evaluate(() => {
+  document.body.dispatchEvent(new CustomEvent('yt-navigate', { bubbles: true, detail: { endpoint: window.reused } }));
+  return [window.reused.commandMetadata.webCommandMetadata.url, window.reused.browseEndpoint.params || null];
+});
+check('A link opened on Videos opens Home again once the setting is off', JSON.stringify(reused) === '["/@Formula1",null]', JSON.stringify(reused));
 navs = await navigate();
 check('Turned off: channel links and URLs open Home as usual', JSON.stringify(navs[0]) === '["/@Formula1",null]' && await landOn('https://www.youtube.com/@Formula1') === '/@Formula1', JSON.stringify(navs));
+
+// With copied comments off, nothing is marked and YouTube's Newest list isn't read.
+await setSettings({ hideCopies: false });
+const callsBefore = nextCalls.length;
+await w.reload();
+await w.waitForTimeout(1500);
+check('Copied comments off: nothing marked, no Newest-order requests', await w.evaluate(() => !document.querySelector('[tt-copy]')) && nextCalls.length === callsBefore, String(nextCalls.length - callsBefore));
 
 check('No page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();

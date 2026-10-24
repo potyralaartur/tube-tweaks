@@ -12,6 +12,17 @@
   const isHome = () => location.pathname === '/';
   const videoId = () => new URLSearchParams(location.search).get('v');
 
+  // Page attributes the CSS hides things by. The last applied set is remembered so it is on the
+  // page at document_start, before chrome.storage answers (no flash of hidden items).
+  const hideAttrs = s => ({
+    'tt-hide-ambient': s.hideAmbient, 'tt-hide-sleep-timer': s.hideSleepTimer, 'tt-hide-paid-promo': s.hidePaidPromo,
+    'tt-hide-copies': s.hideCopies, 'tt-hide-shorts': s.hideShorts, 'tt-hide-low-views': s.hideLowViews,
+  });
+  try {
+    const cached = JSON.parse(localStorage.getItem('tt-hide') || 'null') || hideAttrs(S);
+    for (const [attr, on] of Object.entries(cached)) if (attr in hideAttrs(S)) root.toggleAttribute(attr, !!on);
+  } catch {}
+
   // ---------- Channels open on Videos ----------
   // Links inside YouTube are rewritten in page.js as they're followed. A full page load of a
   // channel's root (typed, bookmarked, from another site) is sent to its Videos tab right away.
@@ -278,7 +289,7 @@
       if (renderedMenuFor !== vid) {
         renderedMenuFor = vid;
         const trigger = menu.querySelector('#trigger, tp-yt-paper-button, #label');
-        if (trigger) { trigger.click(); setTimeout(() => closeDropdown(menu), 50); }
+        if (trigger) { trigger.click(); setTimeout(closeDropdown, 50); }
       }
       return;
     }
@@ -329,10 +340,10 @@
   // ---------- Copied comments (spam bots reposting popular comments) ----------
   // Top-level comments with the same text, ignoring case, punctuation, emoji and spacing, are one
   // group. The oldest is the original, and every newer copy is hidden, however many likes it has
-  // (bots often get them boosted). YouTube's times are coarse ("2 weeks ago"); when a copy shows
-  // the same time as the oldest there is no telling which came first, so it stays. Short texts are
-  // skipped: real people repeat short phrases. The same
-  // comment rendered twice (YouTube sometimes re-inserts a block) is hidden as well.
+  // (bots often get them boosted). YouTube's times are coarse ("2 weeks ago"); when copies show
+  // the same time, YouTube's exact Newest order decides (below), and if it can't, both stay. Short
+  // texts are skipped: real people repeat short phrases. The same comment rendered twice (YouTube
+  // sometimes re-inserts a block) is hidden as well.
   const MIN_COPY_LENGTH = 25;
   // Exact order from YouTube's "Newest" list (read by page.js) settles copies that show the same
   // time: newestIds is a newest-first prefix, so a comment missing from it is older than all in it.
@@ -363,9 +374,20 @@
   }
   const commentId = el => (el.querySelector('#comment #published-time-text a, #published-time-text a')?.getAttribute('href') || '').match(/[?&]lc=([^&]+)/)?.[1] || null;
   const normalizeComment = text => text.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '');
+  // Normalizing every loaded comment on each pass adds up on big comment sections; redo it only
+  // when a comment's text changes.
+  const normalized = new WeakMap();
+  function commentKey(textEl) {
+    const raw = textEl.textContent;
+    const hit = normalized.get(textEl);
+    if (hit && hit.raw === raw) return hit.key;
+    const key = normalizeComment(raw);
+    normalized.set(textEl, { raw, key });
+    return key;
+  }
 
   function markCopies() {
-    const threads = isWatch() ? [...document.querySelectorAll('ytd-comments ytd-item-section-renderer #contents > ytd-comment-thread-renderer')] : [];
+    const threads = isWatch() && S.hideCopies ? [...document.querySelectorAll('ytd-comments ytd-item-section-renderer #contents > ytd-comment-thread-renderer')] : [];
     const groups = new Map();
     const copies = new Set();
     const seenIds = new Set();
@@ -373,7 +395,7 @@
       const id = commentId(el);
       if (id) { if (seenIds.has(id)) { copies.add(el); continue; } seenIds.add(id); }
       const textEl = el.querySelector('#comment #content-text, #content-text');
-      const key = textEl ? normalizeComment(textEl.textContent) : '';
+      const key = textEl ? commentKey(textEl) : '';
       if (key.length < MIN_COPY_LENGTH) continue;
       const pinned = !!el.querySelector('#pinned-comment-badge ytd-pinned-comment-badge-renderer');
       const age = parseAge(el.querySelector('#comment #published-time-text, #published-time-text')?.textContent);
@@ -531,7 +553,9 @@
   }).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['theater'] });
 
   document.addEventListener('yt-navigate-start', () => {
-    // Coming from a non-watch page the watch layout is hidden anyway; from a video the user left\n    // theater on purpose, keep showing it while the next one loads.\n    if (S.cinemaMode) { setWideCookie(); if (!isWatch()) setCinemaPending(true); }
+    // Coming from a non-watch page the watch layout is hidden anyway; from a video the user left
+    // theater on purpose, keep showing it while the next one loads.
+    if (S.cinemaMode) { setWideCookie(); if (!isWatch()) setCinemaPending(true); }
     setMini(false);
     setPopular(false);
   });
@@ -550,12 +574,9 @@
     try { localStorage.setItem('tt-cinema', S.cinemaMode ? '1' : '0'); } catch {}
     try { localStorage.setItem('tt-channel-videos', S.channelVideos ? '1' : '0'); } catch {}
     if (S.cinemaMode) setWideCookie(); else setCinemaPending(false);
-    root.toggleAttribute('tt-hide-ambient', S.hideAmbient);
-    root.toggleAttribute('tt-hide-sleep-timer', S.hideSleepTimer);
-    root.toggleAttribute('tt-hide-paid', S.hidePaidPromo);
-    root.toggleAttribute('tt-hide-copies', S.hideCopies);
-    root.toggleAttribute('tt-hide-shorts', S.hideShorts);
-    root.toggleAttribute('tt-hide-low-views', S.hideLowViews);
+    const hide = hideAttrs(S);
+    for (const [attr, on] of Object.entries(hide)) root.toggleAttribute(attr, on);
+    try { localStorage.setItem('tt-hide', JSON.stringify(hide)); } catch {}
     root.setAttribute('tt-settings', JSON.stringify(S));
     document.dispatchEvent(new CustomEvent('tt-settings'));
     if (!S.popularSort) setPopular(false);
