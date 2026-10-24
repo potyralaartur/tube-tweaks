@@ -1,6 +1,6 @@
 (async () => {
   'use strict';
-  const { DEFAULTS, QUALITIES, load, save } = window.TTSettings;
+  const { DEFAULTS, QUALITIES, load, save, normalize } = window.TTSettings;
   let settings = await load();
 
   // Same names and order as the comment sort menu on YouTube.
@@ -19,12 +19,19 @@
   const status = document.getElementById('status');
   const statusText = status.textContent;
   let statusTimer;
-  async function update(patch) {
-    settings = await save({ ...settings, ...patch });
+  // Changes apply to `settings` right away and saves run one after another, so quick changes in a
+  // row can't overwrite each other.
+  let saving = Promise.resolve();
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
     render();
-    status.textContent = 'Saved';
-    clearTimeout(statusTimer);
-    statusTimer = setTimeout(() => { status.textContent = statusText; }, 1200);
+    const snapshot = settings;
+    saving = saving.then(() => save(snapshot)).then(() => {
+      status.textContent = 'Saved';
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(() => { status.textContent = statusText; }, 1200);
+    }, () => {});
+    return saving;
   }
 
   // ---------- Select (chip + menu) ----------
@@ -109,13 +116,17 @@
 
   const minViews = document.getElementById('min-views');
   const fmt = n => Number(n).toLocaleString('en-US');
-  let numTimer;
+  let numTimer = null;
+  const typedViews = () => Number(minViews.value.replace(/\D/g, '') || 0);
+  // Saves what was typed now instead of after the pause (leaving the field, closing the popup).
+  const flushViews = () => { if (numTimer === null) return; clearTimeout(numTimer); numTimer = null; update({ minViews: typedViews() }); };
   minViews.addEventListener('input', () => {
-    const digits = minViews.value.replace(/\D/g, '');
     clearTimeout(numTimer);
-    numTimer = setTimeout(() => update({ minViews: Number(digits || 0) }), 400);
+    numTimer = setTimeout(() => { numTimer = null; update({ minViews: typedViews() }); }, 400);
   });
-  minViews.addEventListener('blur', () => { minViews.value = fmt(settings.minViews); });
+  minViews.addEventListener('blur', () => { flushViews(); minViews.value = fmt(settings.minViews); });
+  window.addEventListener('pagehide', flushViews);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushViews(); });
   minViews.addEventListener('keydown', e => { if (e.key === 'Enter') minViews.blur(); });
 
   document.getElementById('reset').addEventListener('click', () => update({ ...DEFAULTS }));
