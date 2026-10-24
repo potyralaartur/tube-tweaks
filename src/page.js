@@ -319,6 +319,28 @@
     try { const { vid, ids } = JSON.parse(e.detail); extendOrder(vid, ids); } catch {}
   });
 
+  // ---------- Channels open on Videos ----------
+  // Every in-app navigation goes through a 'yt-navigate' event whose endpoint says where to go.
+  // A plain channel link has a browseEndpoint with no params (= the channel's Home tab); giving it
+  // the Videos tab's params and URL makes YouTube open Videos instead, with the right URL and
+  // history. Tab clicks carry their own params, so Home is still one click away.
+  const VIDEOS_PARAMS = 'EgZ2aWRlb3PyBgQKAjoA';
+  const channelVideos = () => {
+    if (settings) return settings.channelVideos !== false;
+    try { return localStorage.getItem('tt-channel-videos') !== '0'; } catch { return true; }
+  };
+  window.addEventListener('yt-navigate', e => {
+    const ep = e.detail && e.detail.endpoint;
+    const be = ep && ep.browseEndpoint;
+    if (!be || be.params || !/^UC/.test(be.browseId || '') || !channelVideos()) return;
+    const meta = ep.commandMetadata && ep.commandMetadata.webCommandMetadata;
+    if (!meta || typeof meta.url !== 'string') return;
+    const [path, rest = ''] = meta.url.split(/(?=[?#])/);
+    if (!/^\/(@[^/]+|channel\/UC[\w-]+|c\/[^/]+|user\/[^/]+)\/?$/.test(path)) return;
+    be.params = VIDEOS_PARAMS;
+    meta.url = path.replace(/\/$/, '') + '/videos' + rest;
+  }, true);
+
   // ---------- Wiring ----------
 
   document.addEventListener('tt-settings', () => {
