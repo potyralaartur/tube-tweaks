@@ -68,9 +68,13 @@
       setCinemaPending(false);
       return;
     }
-    if (cinemaTries >= 8 || Date.now() - cinemaLastClick < 300) return;
+    if (cinemaTries >= 8) { setCinemaPending(false); return; }
+    if (Date.now() - cinemaLastClick < 300) return;
     const btn = document.querySelector('#movie_player .ytp-size-button');
     if (!btn) return;
+    // Narrow windows use a single-column layout with no theater button: nothing to switch, so
+    // don't keep the page hidden. Widening the window brings the button back and this runs again.
+    if (getComputedStyle(btn).display === 'none') { setCinemaPending(false); return; }
     cinemaTries++; cinemaLastClick = Date.now();
     btn.click();
     setTimeout(enforceCinema, 320); // retry if the click didn't take (player still wiring up)

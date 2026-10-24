@@ -232,6 +232,14 @@ await w.reload();
 await w.waitForTimeout(1500);
 check('Copied comments off: nothing marked, no Newest-order requests', await w.evaluate(() => !document.querySelector('[tt-copy]')) && nextCalls.length === callsBefore, String(nextCalls.length - callsBefore));
 
+// Narrow window: no theater button, so the page must not stay hidden waiting for theater.
+const n = await ctx.newPage();
+n.on('pageerror', e => errors.push(e.message));
+await n.goto('https://www.youtube.com/watch?v=abc&narrow=1');
+await n.waitForTimeout(700);
+check('Narrow window without a theater button: page shown right away, no clicks', await n.evaluate(() =>
+  !document.documentElement.hasAttribute('tt-cinema-pending') && window.sizeClicks === 0 && getComputedStyle(document.querySelector('ytd-watch-flexy')).visibility === 'visible'));
+
 check('No page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();
 fs.rmSync(profile, { recursive: true, force: true });
