@@ -32,4 +32,4 @@ Bump `version` in `manifest.json` (the store refuses a zip with the same or a lo
 
 ## Regenerating the images
 
-`npm run store-assets` redraws `icons/*.png` from `store/src/icon.svg` and `icon-small.svg`, and renders `store/images/` from the real popup with Playwright. It needs a full Chromium or Chrome, because the headless shell can't load extensions: `CHROME=/path/to/chrome npm run store-assets`. Change the slide text in `scripts/store-assets.mjs`.
+`npm run store-assets` redraws `icons/*.png` from `store/src/icon.svg` (one artwork for every size), and renders `store/images/` from the real popup with Playwright. It needs a full Chromium or Chrome, because the headless shell can't load extensions: `CHROME=/path/to/chrome npm run store-assets`. Change the slide text in `scripts/store-assets.mjs`.

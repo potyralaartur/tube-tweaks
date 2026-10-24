@@ -25,10 +25,10 @@ const dataUrl = (buf, type = 'image/png') => `data:${type};base64,${buf.toString
 const svg = name => fs.readFileSync(path.join(src, name));
 
 // ---------- Icons ----------
-// 16 and 32 use the full-bleed two-slider variant; 48 and 128 the padded store artwork.
-for (const [size, file] of [[16, 'icon-small.svg'], [32, 'icon-small.svg'], [48, 'icon.svg'], [128, 'icon.svg']]) {
+// One artwork at every size.
+for (const size of [16, 32, 48, 128]) {
   await page.setViewportSize({ width: size, height: size });
-  await page.setContent(`<style>html,body{margin:0;background:transparent}</style><img src="${dataUrl(svg(file), 'image/svg+xml')}" width="${size}" height="${size}" style="display:block">`);
+  await page.setContent(`<style>html,body{margin:0;background:transparent}</style><img src="${dataUrl(svg('icon.svg'), 'image/svg+xml')}" width="${size}" height="${size}" style="display:block">`);
   await page.screenshot({ path: path.join(root, `icons/icon${size}.png`), omitBackground: true });
 }
 const iconUrl = dataUrl(svg('icon.svg'), 'image/svg+xml');
