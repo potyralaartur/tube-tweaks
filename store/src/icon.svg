@@ -3,16 +3,16 @@
        and a pause knob. 112px disc inside 8px transparent padding (store guidance for round icons). -->
   <circle cx="64" cy="64" r="56" fill="#ff0033"/>
   <g stroke="#fff" stroke-width="10" stroke-linecap="round">
-    <line x1="29" y1="48" x2="99" y2="48"/>
-    <line x1="29" y1="80" x2="99" y2="80"/>
+    <line x1="26" y1="48" x2="102" y2="48"/>
+    <line x1="26" y1="80" x2="102" y2="80"/>
   </g>
-  <g fill="#ff0033" stroke="#ff0033" stroke-width="10" stroke-linejoin="round">
-    <path d="M65 36 L65 60 L86 48 Z"/>
-    <rect x="42" y="69" width="20" height="22"/>
+  <g fill="#ff0033" stroke="#ff0033" stroke-width="9" stroke-linejoin="round">
+    <path d="M68 36 L68 60 L89 48 Z"/>
+    <rect x="40" y="69" width="20" height="22"/>
   </g>
   <g fill="#fff" stroke="#fff" stroke-width="4" stroke-linejoin="round">
-    <path d="M65 36 L65 60 L86 48 Z"/>
-    <rect x="42" y="69" width="6" height="22" rx="1"/>
-    <rect x="56" y="69" width="6" height="22" rx="1"/>
+    <path d="M68 36 L68 60 L89 48 Z"/>
+    <rect x="40" y="69" width="6" height="22" rx="1"/>
+    <rect x="54" y="69" width="6" height="22" rx="1"/>
   </g>
 </svg>
