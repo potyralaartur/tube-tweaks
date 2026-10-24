@@ -74,6 +74,7 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
   <div id="player-container-outer"><div id="movie_player" class="html5-video-player">
     <video class="html5-main-video"></video>
     <button class="ytp-size-button"></button>
+    <div class="ytp-paid-content-overlay" aria-live="assertive" data-overlay-order="5"><a class="ytp-paid-content-overlay-link" href="https://support.google.com/youtube/answer/154235"><div class="ytp-paid-content-overlay-text">Includes paid promotion</div></a></div>
     <button class="ytp-button ytp-settings-button ytp-hd-quality-badge"></button>
     <div class="ytp-settings-menu"><div class="ytp-panel-menu">
       ${menuItem('mi-stable', 'menuitemcheckbox', 'Stable Volume', 'M12 .99C5.92 .99 1 5.92 1 12Z', true)}
