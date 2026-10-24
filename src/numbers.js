@@ -3,7 +3,7 @@
 (function (root) {
   // Suffix → multiplier. Checked case-insensitively against the word after the number.
   const SUFFIXES = [
-    [/^(k|tys|tsd|mil|тыс|тис|rb)$/i, 1e3],
+    [/^(k|tys|tsd|mil|тыс|тис|rb|tis|χιλ)$/i, 1e3],
     [/^(m|mln|mio|млн|mn|jt|tr)$/i, 1e6],
     [/^(bn|mld|mrd|млрд|md)$/i, 1e9],
   ];
@@ -14,6 +14,11 @@
     if (w === 'B') return 1e9; // English billions
     if (w === 'K' || w === 'k') return 1e3;
     if (w === 'M') return 1e6;
+    if (w === 'N') return 1e3; // Vietnamese nghìn
+    // East Asian units are written straight before the next word ("1.2万次观看", "1.2만회").
+    if (/^[万萬만]/.test(w)) return 1e4;
+    if (/^[億亿억]/.test(w)) return 1e8;
+    if (/^[千천]/.test(w)) return 1e3;
     for (const [re, mult] of SUFFIXES) if (re.test(w)) return mult;
     return 1;
   }
@@ -37,8 +42,8 @@
   }
 
   // Words used for "views" in YouTube's metadata line across common locales.
-  const VIEW_WORDS = /view|wyświetle|aufruf|vue|visualiza|visualizz|просмотр|перегляд|weergave|visning|visualizações|görüntüleme|zhlédnutí|megtekintés|vizionăr|προβολ|次|조회|回視聴|lượt xem|tayangan|การดู/i;
-  const LIVE_WORDS = /watching|ogląda|zuschauer|spectateur|viendo|guardando|смотр|kijk/i;
+  const VIEW_WORDS = /\bviews?\b|wyświetle|aufruf|\bvues?\b|visualiza|visualizz|просмотр|перегляд|weergave|visning|visualizações|görüntüleme|zhlédnutí|megtekintés|vizionăr|προβολ|次|조회|回視聴|lượt xem|tayangan|การดู/i;
+  const LIVE_WORDS = /watching|ogląda|zuschauer|spectateur|viendo|guardando|(?<!про)смотр|kijk/i; // not просмотры (views)
 
   // "6 hours ago", "1 day ago (edited)", "5 godzin temu", "vor 3 Tagen" → age in seconds, or null.
   const AGE_UNITS = [

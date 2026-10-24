@@ -9,9 +9,9 @@ const item = (id, channelHref, views) => `
   </ytd-rich-item-renderer>`;
 
 // Newer tile (Oct 2026): a play icon and a bare number, with the words only in aria-label.
-const lockup = (id, channelHref, views) => `
+const lockup = (id, channelHref, views, title = `title ${id}`) => `
   <ytd-rich-item-renderer id="${id}"><yt-lockup-view-model>
-    <a href="/watch?v=${id}">title ${id}</a>
+    <a href="/watch?v=${id}"><h3><span class="yt-core-attributed-string">${title}</span></h3></a>
     <yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow">
       <a href="${channelHref}">${channelHref.slice(2)}</a>
       <span class="ytContentMetadataViewModelLeadingIcon" aria-hidden="true"><svg></svg></span>
@@ -28,6 +28,7 @@ export const home = `<!doctype html><html><head>${ytcfg}</head><body>
   ${item('random-high', '/@random', '1.2K views')}
   ${item('subbed-by-id', '/channel/UCsub2', '50 views')}
   ${lockup('icon-low', '/@random', '569 views')}${lockup('icon-high', '/@random', '5,690 views')}${lockup('icon-live', '/@random', '53 watching')}
+  ${lockup('review-title', '/@random', '1.2M views', 'iPhone 17 Pro review: 3 views on it')}
   <ytd-rich-item-renderer id="short-tile"><a href="/shorts/xyz">short</a></ytd-rich-item-renderer>
 </div></ytd-browse></ytd-app></body></html>`;
 
