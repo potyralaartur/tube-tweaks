@@ -101,6 +101,7 @@
 
     // 1080p Premium is always on. If the API did not switch to it, pick it in the menu.
     if (prem) setTimeout(() => {
+      if (appliedKey !== key || p.getVideoData?.()?.video_id !== vid) return; // moved on meanwhile
       if (!/premium/i.test(currentLabel(p))) selectInQualityMenu(label => /1080p/.test(label) && /premium/i.test(label));
     }, 1500);
     return true;
@@ -115,7 +116,7 @@
       btn.click();
       await sleep(200);
       const items = [...p.querySelectorAll('.ytp-settings-menu .ytp-panel-menu .ytp-menuitem')];
-      const qualityItem = items.find(i => /\d{3,4}p|auto/i.test(i.querySelector('.ytp-menuitem-content')?.textContent || ''));
+      const qualityItem = items.find(i => /\d{3,4}p/.test(i.querySelector('.ytp-menuitem-content')?.textContent || ''));
       if (!qualityItem) { btn.click(); return; }
       qualityItem.click();
       await sleep(250);
@@ -233,21 +234,24 @@
 
     for (let i = 0; i < 40 && !(window.ytcfg && window.ytcfg.get && window.ytcfg.get('INNERTUBE_CONTEXT')); i++) await sleep(250);
     const cfg = window.ytcfg;
-    if (!cfg || !cfg.get) return null;
+    if (!cfg || !cfg.get || !cfg.get('INNERTUBE_CONTEXT')) return null; // not ready: asked again later
     if (!cfg.get('LOGGED_IN')) return { t: Date.now(), loggedIn: false, ids: [], urls: [], names: [] };
 
     const call = innertube;
 
     const out = { ids: new Set(), urls: new Set(), names: new Set() };
-    try { collectChannels(await call('guide', {}), out, false); } catch {}
+    let answered = 0;
+    try { collectChannels(await call('guide', {}), out, false); answered++; } catch {}
     try {
       let json = await call('browse', { browseId: 'FEchannels' });
       for (let page = 0; page < 50 && json; page++) {
         collectChannels(json, out, false);
         const token = findContinuation(json);
         json = token ? await call('browse', { continuation: token }) : null;
+        if (!page) answered++;
       }
     } catch {}
+    if (!answered) return null; // both failed: don't treat it as "no subscriptions"; asked again later
 
     const result = { t: Date.now(), loggedIn: true, ids: [...out.ids], urls: [...out.urls], names: [...out.names] };
     if (result.ids.length) { try { localStorage.setItem(SUBS_CACHE, JSON.stringify(result)); } catch {} }
@@ -299,8 +303,8 @@
     return { ids, next };
   }
 
-  async function extendOrder(vid, wanted) {
-    if (!order || order.vid !== vid) order = { vid, ids: [], wanted: new Set(), token: null, pages: 0, done: false, busy: false };
+  async function extendOrder(vid, wanted, refresh) {
+    if (!order || order.vid !== vid || (refresh && !order.busy)) order = { vid, ids: [], wanted: new Set(), token: null, pages: 0, done: false, busy: false, readAt: Date.now() };
     const o = order;
     wanted.forEach(id => o.wanted.add(id));
     if (o.busy) return; // the running read picks up the new ids
@@ -316,12 +320,14 @@
         if (!next) o.done = true;
       }
     } catch {} finally { o.busy = false; }
-    if (order === o && o.pages) {
-      document.dispatchEvent(new CustomEvent('tt-comment-order-result', { detail: JSON.stringify({ vid, ids: o.ids }) }));
-    }
+    if (order !== o) return;
+    // Nothing read (no token yet, or the request failed): start over next time and say so.
+    const failed = !o.pages;
+    if (failed) order = null;
+    document.dispatchEvent(new CustomEvent('tt-comment-order-result', { detail: JSON.stringify({ vid, ids: o.ids, readAt: o.readAt, failed }) }));
   }
   document.addEventListener('tt-comment-order', e => {
-    try { const { vid, ids } = JSON.parse(e.detail); extendOrder(vid, ids); } catch {}
+    try { const { vid, ids, refresh } = JSON.parse(e.detail); extendOrder(vid, ids, !!refresh); } catch {}
   });
 
   // ---------- Channels open on Videos ----------
@@ -361,9 +367,10 @@
   // ---------- Wiring ----------
 
   document.addEventListener('tt-settings', () => {
+    const before = settings && settings.quality;
     readSettings();
-    appliedKey = null;
-    scheduleQuality();
+    // Only a new preferred quality is re-applied; other settings leave a quality picked by hand alone.
+    if (!settings || settings.quality !== before) { appliedKey = null; scheduleQuality(); }
   });
 
   const onNewVideo = () => { appliedKey = null; scheduleQuality(); updateBadge(); };

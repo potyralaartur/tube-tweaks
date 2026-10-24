@@ -55,7 +55,8 @@
   if (cinemaFlag && isWatch()) setCinemaPending(true);
 
   // Once a video has reached theater view, the user is free to leave it (button or "t").
-  let cinemaVid = null, cinemaDone = null, cinemaTries = 0, cinemaLastClick = 0;
+  let cinemaVid = null, cinemaDone = null, cinemaTries = 0, cinemaLastClick = 0, cinemaReachedAt = 0, lastUserInput = 0;
+  for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, e => { if (e.isTrusted) lastUserInput = Date.now(); }, true);
   function enforceCinema() {
     if (!(ready ? S.cinemaMode : cinemaFlag) || !isWatch()) return;
     const vid = videoId();
@@ -64,21 +65,33 @@
     const flexy = document.querySelector('ytd-watch-flexy');
     if (!flexy || flexy.hasAttribute('hidden')) return;
     if (flexy.hasAttribute('theater') || flexy.hasAttribute('fullscreen') || document.fullscreenElement) {
+      if (cinemaDone !== vid) cinemaReachedAt = Date.now();
       cinemaDone = vid;
       setCinemaPending(false);
       return;
     }
-    if (cinemaTries >= 8 || Date.now() - cinemaLastClick < 300) return;
+    if (cinemaTries >= 8) { setCinemaPending(false); return; }
+    if (Date.now() - cinemaLastClick < 300) return;
     const btn = document.querySelector('#movie_player .ytp-size-button');
     if (!btn) return;
+    // Narrow windows use a single-column layout with no theater button: nothing to switch, so
+    // don't keep the page hidden. Widening the window brings the button back and this runs again.
+    if (getComputedStyle(btn).display === 'none') { setCinemaPending(false); return; }
     cinemaTries++; cinemaLastClick = Date.now();
     btn.click();
     setTimeout(enforceCinema, 320); // retry if the click didn't take (player still wiring up)
   }
   // YouTube announces its own starting state on load (enabled:false, since it no longer keeps
   // theater across sessions). A click made just before that is lost, so go again right after.
+  // Leaving theater after it was reached counts as the user's choice only with a click or key press.
   document.addEventListener('yt-set-theater-mode-enabled', e => {
-    if (e.detail && e.detail.enabled === false && cinemaDone !== videoId()) { cinemaLastClick = 0; setTimeout(enforceCinema, 0); }
+    if (!e.detail || e.detail.enabled !== false) return;
+    if (cinemaDone === videoId()) {
+      if (lastUserInput >= cinemaReachedAt) return;
+      cinemaDone = null;
+    }
+    cinemaLastClick = 0;
+    setTimeout(enforceCinema, 0);
   });
 
   // ---------- Hide low-view videos on Home ----------
@@ -116,6 +129,7 @@
     let views = null, live = false;
     const texts = item.querySelectorAll('#metadata-line span, .inline-metadata-item, .yt-content-metadata-view-model-wiz__metadata-text, .yt-content-metadata-view-model__metadata-text, .ytContentMetadataViewModelMetadataText, span.yt-core-attributed-string');
     for (const el of texts) {
+      if (el.closest('h3, #video-title')) continue; // titles can contain numbers and "review"
       // Newer tiles show a play icon and a bare number ("▷ 569"); the words are in aria-label.
       for (const part of (el.getAttribute('aria-label') || el.textContent).split('•')) {
         if (LIVE_WORDS.test(part)) live = true;
@@ -286,7 +300,7 @@
     const vid = videoId();
     if (!listbox || nativeItems(listbox).length < 2) {
       // Some layouts only render the options once the menu has been opened.
-      if (renderedMenuFor !== vid) {
+      if (renderedMenuFor !== vid && (S.popularSort || S.defaultSort !== 'top')) {
         renderedMenuFor = vid;
         const trigger = menu.querySelector('#trigger, tp-yt-paper-button, #label');
         if (trigger) { trigger.click(); setTimeout(closeDropdown, 50); }
@@ -309,6 +323,7 @@
       setPopular(false);
       const items = nativeItems(listbox);
       if (S.defaultSort === 'newest' && !isSelected(items[1])) clickItem(items[1]);
+      else if (S.defaultSort === 'top' && items[0] && !isSelected(items[0])) clickItem(items[0]);
       else if (S.defaultSort === 'popular' && S.popularSort) activatePopular(listbox);
     }
   }
@@ -347,28 +362,44 @@
   const MIN_COPY_LENGTH = 25;
   // Exact order from YouTube's "Newest" list (read by page.js) settles copies that show the same
   // time: newestIds is a newest-first prefix, so a comment missing from it is older than all in it.
-  let newest = { vid: null, index: new Map() }, orderAsked = new Set();
+  // `readAt` is when the read began: comments posted after it are missing too, though newer.
+  let newest = { vid: null, index: new Map(), readAt: 0 }, orderAsked = new Set(), orderRefreshed = new Set(), orderRetries = 0;
   document.addEventListener('tt-comment-order-result', e => {
     try {
-      const { vid, ids } = JSON.parse(e.detail);
+      const { vid, ids, readAt, failed } = JSON.parse(e.detail);
       if (vid !== videoId()) return;
-      newest = { vid, index: new Map(ids.map((id, i) => [id, i])) };
+      if (failed) {
+        // Not read (header data not ready yet, or the request failed): ask again a bit later.
+        if (orderRetries++ < 3) setTimeout(() => { if (videoId() === vid) { orderAsked = new Set(); schedule(); } }, 5000);
+        return;
+      }
+      newest = { vid, index: new Map(ids.map((id, i) => [id, i])), readAt };
       schedule();
     } catch {}
   });
-  function askOrder(ids) {
+  function askOrder(ids, refresh = false) {
     const vid = videoId();
-    if (newest.vid !== vid) { newest = { vid, index: new Map() }; orderAsked = new Set(); }
-    const fresh = ids.filter(id => !orderAsked.has(id));
-    if (!fresh.length) return;
-    fresh.forEach(id => orderAsked.add(id));
-    document.dispatchEvent(new CustomEvent('tt-comment-order', { detail: JSON.stringify({ vid, ids: [...orderAsked] }) }));
+    if (newest.vid !== vid) { newest = { vid, index: new Map(), readAt: 0 }; orderAsked = new Set(); orderRefreshed = new Set(); orderRetries = 0; }
+    if (refresh) {
+      if (ids.every(id => orderRefreshed.has(id))) return;
+      ids.forEach(id => orderRefreshed.add(id));
+    } else {
+      const fresh = ids.filter(id => !orderAsked.has(id));
+      if (!fresh.length) return;
+    }
+    ids.forEach(id => orderAsked.add(id));
+    document.dispatchEvent(new CustomEvent('tt-comment-order', { detail: JSON.stringify({ vid, ids: [...orderAsked], refresh }) }));
   }
   // The first posted among comments that show the same time, or null if the order isn't known.
   function firstPosted(items) {
     if (newest.vid !== videoId() || !newest.index.size) return null;
     const unseen = items.filter(i => !newest.index.has(i.id));
-    if (unseen.length === 1) return unseen[0];
+    if (unseen.length === 1) {
+      // A comment young enough to have been posted after the read may be the newest, not the
+      // oldest: read the list again from the start (once per comment).
+      if (unseen[0].age >= 0 && unseen[0].age * 1000 < Date.now() - newest.readAt + 60000) { askOrder(items.map(i => i.id), true); return null; }
+      return unseen[0];
+    }
     if (unseen.length > 1) return null;
     return items.reduce((a, b) => (newest.index.get(b.id) > newest.index.get(a.id) ? b : a));
   }
@@ -483,8 +514,8 @@
   }
 
   function setMini(on) {
-    if (on) miniGeometry();
     if (miniOn === on) return;
+    if (on) miniGeometry(); // then kept up to date on resize
     miniOn = on;
     liftAncestors(document.getElementById('movie_player'), on);
     root.toggleAttribute('tt-mini', on);
@@ -556,8 +587,11 @@
     // Coming from a non-watch page the watch layout is hidden anyway; from a video the user left
     // theater on purpose, keep showing it while the next one loads.
     if (S.cinemaMode) { setWideCookie(); if (!isWatch()) setCinemaPending(true); }
+    // Each page view starts in theater again, including a video left in default view earlier.
+    cinemaVid = cinemaDone = null;
     setMini(false);
     setPopular(false);
+    commentsVid = null; // re-apply the default sort, also when coming back to the same video
   });
   document.addEventListener('yt-navigate-finish', () => {
     if (!isWatch()) setCinemaPending(false);
@@ -571,7 +605,10 @@
     const sortChanged = settings.defaultSort !== S.defaultSort || settings.popularSort !== S.popularSort;
     S = settings;
     ready = true;
-    try { localStorage.setItem('tt-cinema', S.cinemaMode ? '1' : '0'); } catch {}
+    let wasCinema = false;
+    try { wasCinema = localStorage.getItem('tt-cinema') === '1'; localStorage.setItem('tt-cinema', S.cinemaMode ? '1' : '0'); } catch {}
+    // Our year-long theater cookie would keep some accounts in theater after turning this off.
+    if (wasCinema && !S.cinemaMode) document.cookie = 'wide=; domain=.youtube.com; path=/; max-age=0; secure; samesite=lax';
     try { localStorage.setItem('tt-channel-videos', S.channelVideos ? '1' : '0'); } catch {}
     if (S.cinemaMode) setWideCookie(); else setCinemaPending(false);
     const hide = hideAttrs(S);

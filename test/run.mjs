@@ -31,6 +31,15 @@ await ctx.route('https://www.youtube.com/**', route => {
 
 let failures = 0;
 const check = (name, ok, extra = '') => { console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${extra ? '  ' + extra : ''}`); if (!ok) failures++; };
+
+// Number parsing across YouTube languages
+await import('../src/numbers.js');
+const { parseCount, parseAge, VIEW_WORDS, LIVE_WORDS } = globalThis.TTNumbers;
+const counts = ['1.2K views', '1,2 tys. wyświetleń', '12 345 Aufrufe', '1.2万 回視聴', '1.2万次观看', '조회수 1.2만회', '1,2 N lượt xem'].map(parseCount);
+check('Localized view counts parsed', JSON.stringify(counts) === '[1200,1200,12345,12000,12000,12000,1200]', JSON.stringify(counts));
+check('Russian views are not mistaken for a live stream', VIEW_WORDS.test('120 просмотров') && !LIVE_WORDS.test('120 просмотров') && LIVE_WORDS.test('53 смотрят'));
+check('"review" is not a view count word', !VIEW_WORDS.test('iPhone 17 Pro review'));
+check('Russian "год" is a year', parseAge('1 год назад') === 31536000 && parseAge('2 години тому') === 7200);
 const errors = [];
 
 // Home feed
@@ -42,6 +51,11 @@ const shown = await h.evaluate(() => [...document.querySelectorAll('ytd-rich-ite
   .filter(e => getComputedStyle(e).display !== 'none').map(e => e.id));
 check('Shorts shelf and tiles hidden', !shown.includes('shorts-shelf') && !shown.includes('short-tile'), JSON.stringify(shown));
 check('Low-view video from unsubscribed channel hidden', !shown.includes('random-low'));
+check('A number in the title is not taken for the view count', shown.includes('review-title'));
+// Like YouTube: in-app navigation starts with yt-navigate-start. Going to a video keeps the page hidden until theater.
+const pendingOnNav = await h.evaluate(() => { document.dispatchEvent(new CustomEvent('yt-navigate-start')); return document.documentElement.hasAttribute('tt-cinema-pending'); });
+check('Navigating from Home keeps the next page hidden until theater view', pendingOnNav);
+await h.evaluate(() => document.documentElement.removeAttribute('tt-cinema-pending'));
 check('Low-view tile with an icon count hidden (count read from aria-label)', !shown.includes('icon-low') && shown.includes('icon-high') && shown.includes('icon-live'));
 check('Low-view video from subscribed channel kept (handle)', shown.includes('subbed-low'));
 check('Low-view video from subscribed channel kept (channel id)', shown.includes('subbed-by-id'));
@@ -177,6 +191,13 @@ await w.waitForTimeout(100);
 check('2K badge appears right after switching to 1440p', await w.evaluate(() => document.getElementById('movie_player').hasAttribute('tt-2k')));
 const sups = await w.evaluate(() => [...document.querySelectorAll('.ytp-settings-menu sup')].map(s => s.textContent));
 check('Quality menu shows 2K for 1440p, HD for 1080p', JSON.stringify(sups) === '["2K","HD"]', JSON.stringify(sups));
+// A quality picked by hand survives saving an unrelated setting.
+await w.evaluate(() => window.setQualityFromMenu('hd720'));
+const callsBeforeSave = (await w.evaluate(() => window.qualityCalls)).length;
+await setSettings({ hideShorts: false });
+await w.waitForTimeout(800);
+check('Saving another setting leaves a hand-picked quality alone', (await w.evaluate(() => window.qualityCalls)).length === callsBeforeSave);
+await setSettings({ hideShorts: true });
 
 const menuShown = () => w.evaluate(() => [...document.querySelectorAll('.ytp-settings-menu .ytp-menuitem[id]')]
   .filter(e => getComputedStyle(e).display !== 'none').map(e => e.id));
@@ -231,6 +252,14 @@ const callsBefore = nextCalls.length;
 await w.reload();
 await w.waitForTimeout(1500);
 check('Copied comments off: nothing marked, no Newest-order requests', await w.evaluate(() => !document.querySelector('[tt-copy]')) && nextCalls.length === callsBefore, String(nextCalls.length - callsBefore));
+
+// Narrow window: no theater button, so the page must not stay hidden waiting for theater.
+const n = await ctx.newPage();
+n.on('pageerror', e => errors.push(e.message));
+await n.goto('https://www.youtube.com/watch?v=abc&narrow=1');
+await n.waitForTimeout(700);
+check('Narrow window without a theater button: page shown right away, no clicks', await n.evaluate(() =>
+  !document.documentElement.hasAttribute('tt-cinema-pending') && window.sizeClicks === 0 && getComputedStyle(document.querySelector('ytd-watch-flexy')).visibility === 'visible'));
 
 check('No page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();
