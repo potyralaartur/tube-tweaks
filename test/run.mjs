@@ -187,6 +187,28 @@ await w.waitForTimeout(600);
 shownItems = await menuShown();
 check('Turning the options off brings them back', shownItems.length === 7, JSON.stringify(shownItems));
 
+// Channels open on Videos
+const c = await ctx.newPage();
+c.on('pageerror', e => errors.push(e.message));
+const landOn = async url => { await c.goto(url); await c.waitForTimeout(400); return new URL(c.url()).pathname; };
+check('Typed channel URL lands on Videos', await landOn('https://www.youtube.com/@Formula1') === '/@Formula1/videos');
+check('Old /channel/ and /c/ URLs land on Videos', await landOn('https://www.youtube.com/channel/UCB_qr75-ydFVKSF9Dmo6izg') === '/channel/UCB_qr75-ydFVKSF9Dmo6izg/videos' && await landOn('https://www.youtube.com/c/Formula1/') === '/c/Formula1/videos');
+check("A channel's Home tab URL is left alone", await landOn('https://www.youtube.com/@Formula1/featured') === '/@Formula1/featured');
+// Like YouTube: links fire 'yt-navigate' with the endpoint to open; the extension edits it in place.
+const navigate = () => c.evaluate(() => {
+  const ep = (url, params) => ({ commandMetadata: { webCommandMetadata: { url, webPageType: 'WEB_PAGE_TYPE_CHANNEL' } }, browseEndpoint: { browseId: 'UCB_qr75', canonicalBaseUrl: '/@Formula1', ...(params ? { params } : {}) } });
+  const sent = [ep('/@Formula1'), ep('/@Formula1/featured', 'EghmZWF0dXJlZPIGBAoCMgA%3D'), { commandMetadata: { webCommandMetadata: { url: '/watch?v=abc' } }, watchEndpoint: { videoId: 'abc' } }];
+  for (const endpoint of sent) document.body.dispatchEvent(new CustomEvent('yt-navigate', { bubbles: true, detail: { endpoint } }));
+  return sent.map(e => [e.commandMetadata.webCommandMetadata.url, e.browseEndpoint?.params || null]);
+});
+let navs = await navigate();
+check('Channel links open the Videos tab', JSON.stringify(navs[0]) === '["/@Formula1/videos","EgZ2aWRlb3PyBgQKAjoA"]', JSON.stringify(navs));
+check('Channel tab and video links are left alone', JSON.stringify(navs.slice(1)) === '[["/@Formula1/featured","EghmZWF0dXJlZPIGBAoCMgA%3D"],["/watch?v=abc",null]]', JSON.stringify(navs));
+await setSettings({ channelVideos: false });
+await c.waitForTimeout(400);
+navs = await navigate();
+check('Turned off: channel links and URLs open Home as usual', JSON.stringify(navs[0]) === '["/@Formula1",null]' && await landOn('https://www.youtube.com/@Formula1') === '/@Formula1', JSON.stringify(navs));
+
 check('No page errors', errors.length === 0, errors.join(' | '));
 await ctx.close();
 fs.rmSync(profile, { recursive: true, force: true });

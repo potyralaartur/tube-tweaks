@@ -16,6 +16,7 @@ A Chrome extension that tunes YouTube to your taste. Design: [Figma – YouTube 
 | Mini player while reading comments | When you scroll past the player, the video keeps playing over the column of related videos, at that column's width. The close button (shown with the player controls) hides it until you scroll back up. |
 | Hide Shorts | Removes Shorts shelves and Shorts tiles from Home. |
 | Hide low-view videos | Hides Home videos below a view count (default 1,000), only from channels you're **not** subscribed to. |
+| Open channels on Videos | Channel links and channel URLs open the Videos tab instead of Home. The channel's Home tab is still one click away. |
 | 2K badge | When a video plays at 1440p, YouTube's “HD” badge on the gear icon and in the quality menu becomes **2K**, drawn in YouTube's own badge style. |
 
 Settings are saved instantly in `chrome.storage.sync`, so they survive browser restarts, Chrome updates and extension updates, and follow your Chrome profile.

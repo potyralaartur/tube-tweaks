@@ -12,6 +12,17 @@
   const isHome = () => location.pathname === '/';
   const videoId = () => new URLSearchParams(location.search).get('v');
 
+  // ---------- Channels open on Videos ----------
+  // Links inside YouTube are rewritten in page.js as they're followed. A full page load of a
+  // channel's root (typed, bookmarked, from another site) is sent to its Videos tab right away.
+  // The channel's own Home tab is /featured, so it stays reachable.
+  const CHANNEL_ROOT = /^\/(@[^/]+|channel\/UC[\w-]+|c\/[^/]+|user\/[^/]+)\/?$/;
+  let channelFlag = true;
+  try { channelFlag = localStorage.getItem('tt-channel-videos') !== '0'; } catch {}
+  if (channelFlag && CHANNEL_ROOT.test(location.pathname)) {
+    location.replace(location.pathname.replace(/\/$/, '') + '/videos' + location.search + location.hash);
+  }
+
   // ---------- Cinema mode ----------
   // YouTube now keeps theater view only for the browser session (its "wide" cookie is a session
   // cookie and the server ignores it on load: START_IN_THEATER_MODE is always false),
@@ -537,6 +548,7 @@
     S = settings;
     ready = true;
     try { localStorage.setItem('tt-cinema', S.cinemaMode ? '1' : '0'); } catch {}
+    try { localStorage.setItem('tt-channel-videos', S.channelVideos ? '1' : '0'); } catch {}
     if (S.cinemaMode) setWideCookie(); else setCinemaPending(false);
     root.toggleAttribute('tt-hide-ambient', S.hideAmbient);
     root.toggleAttribute('tt-hide-sleep-timer', S.hideSleepTimer);

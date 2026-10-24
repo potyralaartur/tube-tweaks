@@ -12,6 +12,7 @@
     hideCopies: true, // comments that repeat an earlier comment word for word (spam bots)
     miniPlayer: true,
     hideShorts: true,
+    channelVideos: true, // channel pages open on the Videos tab
     hideLowViews: true,
     minViews: 1000,
   });
