@@ -7,6 +7,7 @@
     cinemaMode: true,
     hideAmbient: true, // Ambient mode item in the player's settings menu
     hideSleepTimer: true, // Sleep timer item in the player's settings menu
+    hidePaidPromo: true, // "Includes paid promotion" banner on the player
     popularSort: true,
     defaultSort: 'popular', // 'top' | 'newest' | 'popular'
     hideCopies: true, // comments that repeat an earlier comment word for word (spam bots)

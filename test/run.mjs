@@ -186,6 +186,11 @@ await opts.evaluate(async () => { const s = await TTSettings.load(); await TTSet
 await w.waitForTimeout(600);
 shownItems = await menuShown();
 check('Turning the options off brings them back', shownItems.length === 7, JSON.stringify(shownItems));
+const paidShown = () => w.evaluate(() => getComputedStyle(document.querySelector('.ytp-paid-content-overlay')).display !== 'none');
+check('"Includes paid promotion" hidden on the player', !(await paidShown()));
+await setSettings({ hidePaidPromo: false });
+await w.waitForTimeout(600);
+check('Turning it off shows the label again', await paidShown());
 
 // Channels open on Videos
 const c = await ctx.newPage();

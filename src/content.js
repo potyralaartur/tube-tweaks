@@ -552,6 +552,7 @@
     if (S.cinemaMode) setWideCookie(); else setCinemaPending(false);
     root.toggleAttribute('tt-hide-ambient', S.hideAmbient);
     root.toggleAttribute('tt-hide-sleep-timer', S.hideSleepTimer);
+    root.toggleAttribute('tt-hide-paid', S.hidePaidPromo);
     root.toggleAttribute('tt-hide-copies', S.hideCopies);
     root.toggleAttribute('tt-hide-shorts', S.hideShorts);
     root.toggleAttribute('tt-hide-low-views', S.hideLowViews);

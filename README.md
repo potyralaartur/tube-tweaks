@@ -10,6 +10,7 @@ A Chrome extension that tunes YouTube to your taste. Design: [Figma – YouTube 
 | 1080p Premium (always on) | Whenever 1080p is picked and the video offers **1080p Premium**, Premium is used instead. Needs a YouTube Premium account. |
 | Always use cinema mode | Opens every video in theater view right away (the default layout is never shown). Leaving theater view by hand sticks for that video. |
 | Hide Ambient mode / Hide Sleep timer | Removes these items from the player's settings (gear) menu. They're recognised by their icons, so it works in any YouTube language. |
+| Hide “Includes paid promotion” | Hides the paid-promotion label YouTube shows at the top of the player for the first seconds of sponsored videos (it is a link to a help page and easy to click by mistake). |
 | Add “Most popular” sort | Adds a **Most popular** option to the comment sort menu that orders comments by likes. The pinned comment stays on top. |
 | Default sort | Most popular, Top or Newest, applied whenever comments load. |
 | Hide copied comments | Hides comments that repeat an earlier comment word for word (ignoring punctuation, emoji and case), the way spam bots repost popular comments. The oldest one stays and newer copies are hidden even if they have more likes; when both show the same time (YouTube rounds older times, like "2 weeks ago"), the extension quietly reads YouTube's Newest list (up to about 300 of the newest comments, only for such ties) to find which was posted first. If neither is in that range, both stay. Short phrases are never matched. |
