@@ -116,7 +116,10 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
     { title: 'Newest', serviceEndpoint: { continuationCommand: { token: 'NEWEST' } } },
   ] } } };
   // Like YouTube: the starting layout comes from ytcfg; the size button toggles it.
-  if (ytcfg.get('START_IN_THEATER_MODE')) flexy.setAttribute('theater', '');
+  // Narrow window: single column, YouTube hides the theater button and ignores the start mode.
+  const narrow = location.search.includes('narrow');
+  if (narrow) document.querySelector('.ytp-size-button').style.display = 'none';
+  else if (ytcfg.get('START_IN_THEATER_MODE')) flexy.setAttribute('theater', '');
   window.sizeClicks = 0;
   document.querySelector('.ytp-size-button').addEventListener('click', () => { window.sizeClicks++; flexy.toggleAttribute('theater'); });
   // Like iron-selector: the listbox selects whichever of its children was clicked.
