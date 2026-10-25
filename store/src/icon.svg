@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Tube Tweaks icon, the same at every size: the popup's red toggle, switched on, with a play button
+       for the knob. Exported from the Figma "App icon" component (Size=New, Artur's version). -->
+  <rect y="16" width="128" height="96" rx="48" fill="#ff0033"/>
+  <rect x="40" y="24" width="80" height="80" rx="40" fill="#fff"/>
+  <path d="M69.629 42.4609C70.9435 41.7239 72.5537 41.7548 73.8396 42.5407L103.84 60.874C105.078 61.6309 105.833 62.9774 105.833 64.4287C105.833 65.8799 105.078 67.2265 103.84 67.9834L73.8396 86.3167C72.5537 87.1024 70.9434 87.1334 69.629 86.3964C68.3145 85.6592 67.5002 84.2691 67.5001 82.762V46.0953C67.5001 44.5882 68.3145 43.1982 69.629 42.4609Z" fill="#ff0033"/>
+</svg>
