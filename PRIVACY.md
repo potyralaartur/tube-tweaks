@@ -49,6 +49,6 @@ If the extension starts handling information differently, this page will be upda
 
 ## Contact
 
-Questions about this policy: open an issue at https://github.com/potyralaartur/tube-tweaks/issues.
+Questions about this policy: open an issue at https://github.com/ptrl-design/tube-tweaks/issues.
 
 Tube Tweaks is an independent project and is not affiliated with, endorsed by or sponsored by YouTube or Google.
