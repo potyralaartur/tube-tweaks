@@ -7,6 +7,7 @@
   const root = document.documentElement;
   let settings = null;
   let appliedKey = null;
+  let forcedVid = null; // the video whose quality range this extension last fixed
   let retryTimer = null;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -79,9 +80,16 @@
   function applyQuality() {
     const p = player();
     if (!settings || !p || typeof p.getAvailableQualityLevels !== 'function') return false;
-    if (settings.quality === 'auto') return true;
-    if (p.classList.contains('ad-showing')) return false;
     const vid = p.getVideoData?.()?.video_id;
+    if (settings.quality === 'auto') {
+      // Release a quality this extension fixed on the open video, so YouTube can adapt again.
+      if (forcedVid && forcedVid === vid) {
+        try { p.setPlaybackQualityRange('auto', 'auto'); } catch { try { p.setPlaybackQuality('auto'); } catch {} }
+      }
+      forcedVid = null;
+      return true;
+    }
+    if (p.classList.contains('ad-showing')) return false;
     if (!vid) return false;
     const levels = p.getAvailableQualityLevels() || [];
     if (!levels.length) return false;
@@ -93,6 +101,7 @@
     appliedKey = key;
 
     const prem = target === 'hd1080' ? premiumEntry(p) : null;
+    forcedVid = vid;
     try {
       if (prem && prem.formatId) p.setPlaybackQualityRange(target, target, prem.formatId);
       else if (typeof p.setPlaybackQualityRange === 'function') p.setPlaybackQualityRange(target, target);
@@ -227,33 +236,33 @@
   }
 
   async function fetchSubscriptions() {
-    try {
-      const cached = JSON.parse(localStorage.getItem(SUBS_CACHE) || 'null');
-      if (cached && Date.now() - cached.t < SUBS_TTL) return cached;
-    } catch {}
-
     for (let i = 0; i < 40 && !(window.ytcfg && window.ytcfg.get && window.ytcfg.get('INNERTUBE_CONTEXT')); i++) await sleep(250);
     const cfg = window.ytcfg;
     if (!cfg || !cfg.get || !cfg.get('INNERTUBE_CONTEXT')) return null; // not ready: asked again later
     if (!cfg.get('LOGGED_IN')) return { t: Date.now(), loggedIn: false, ids: [], urls: [], names: [] };
 
-    const call = innertube;
+    // The cache belongs to the signed-in account (and brand channel) it was read for.
+    const account = `${cfg.get('SESSION_INDEX') ?? 0}|${cfg.get('DELEGATED_SESSION_ID') || ''}`;
+    try {
+      const cached = JSON.parse(localStorage.getItem(SUBS_CACHE) || 'null');
+      if (cached && cached.account === account && Date.now() - cached.t < SUBS_TTL) return cached;
+    } catch {}
 
     const out = { ids: new Set(), urls: new Set(), names: new Set() };
     let answered = 0;
-    try { collectChannels(await call('guide', {}), out, false); answered++; } catch {}
+    try { collectChannels(await innertube('guide', {}), out, false); answered++; } catch {}
     try {
-      let json = await call('browse', { browseId: 'FEchannels' });
+      let json = await innertube('browse', { browseId: 'FEchannels' });
+      answered++;
       for (let page = 0; page < 50 && json; page++) {
         collectChannels(json, out, false);
         const token = findContinuation(json);
-        json = token ? await call('browse', { continuation: token }) : null;
-        if (!page) answered++;
+        json = token ? await innertube('browse', { continuation: token }) : null;
       }
     } catch {}
     if (!answered) return null; // both failed: don't treat it as "no subscriptions"; asked again later
 
-    const result = { t: Date.now(), loggedIn: true, ids: [...out.ids], urls: [...out.urls], names: [...out.names] };
+    const result = { t: Date.now(), account, loggedIn: true, ids: [...out.ids], urls: [...out.urls], names: [...out.names] };
     if (result.ids.length) { try { localStorage.setItem(SUBS_CACHE, JSON.stringify(result)); } catch {} }
     return result;
   }
@@ -307,7 +316,7 @@
     if (!order || order.vid !== vid || (refresh && !order.busy)) order = { vid, ids: [], wanted: new Set(), token: null, pages: 0, done: false, busy: false, readAt: Date.now() };
     const o = order;
     wanted.forEach(id => o.wanted.add(id));
-    if (o.busy) return; // the running read picks up the new ids
+    if (o.busy) { if (refresh) o.restart = true; return; } // the running read picks up the new ids
     o.busy = true;
     try {
       if (!o.token && !o.pages) o.token = newestToken();
@@ -321,6 +330,8 @@
       }
     } catch {} finally { o.busy = false; }
     if (order !== o) return;
+    // A fresh read was asked for while this one ran: start again from the newest comments.
+    if (o.restart) { order = null; extendOrder(vid, [...o.wanted], false); return; }
     // Nothing read (no token yet, or the request failed): start over next time and say so.
     const failed = !o.pages;
     if (failed) order = null;
