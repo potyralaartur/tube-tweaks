@@ -56,6 +56,7 @@ const shown = await h.evaluate(() => [...document.querySelectorAll('ytd-rich-ite
 check('Shorts shelf and tiles hidden', !shown.includes('shorts-shelf') && !shown.includes('short-tile'), JSON.stringify(shown));
 check('Low-view video from unsubscribed channel hidden', !shown.includes('random-low'));
 check('A number in the title is not taken for the view count', shown.includes('review-title'));
+check('Spelled-out counts ("284 thousand views") are not taken for 284', shown.includes('spelled-out') && shown.includes('spelled-out-m'));
 // Like YouTube: in-app navigation starts with yt-navigate-start. Going to a video keeps the page hidden until theater.
 const pendingOnNav = await h.evaluate(() => { document.dispatchEvent(new CustomEvent('yt-navigate-start')); return document.documentElement.hasAttribute('tt-cinema-pending'); });
 check('Navigating from Home keeps the next page hidden until theater view', pendingOnNav);
