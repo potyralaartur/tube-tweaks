@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Tube Tweaks</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header class="header">
+    <img class="logo" src="../icons/icon128.png" alt="" width="32" height="32">
+    <div>
+      <h1 class="title">Tube Tweaks</h1>
+      <p class="caption">Settings for YouTube</p>
+    </div>
+  </header>
+
+  <main class="body">
+    <section aria-labelledby="h-playback">
+      <h2 class="section" id="h-playback">Playback</h2>
+      <div class="row">
+        <div class="text">
+          <span class="row-title" id="l-quality">Preferred quality</span>
+          <span class="row-desc">Applied automatically to every video</span>
+        </div>
+        <div class="select" data-setting="quality" aria-labelledby="l-quality"></div>
+      </div>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Always use cinema mode</span>
+          <span class="row-desc">Opens every video in theater view instantly</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="cinemaMode">
+      </label>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Hide Ambient mode</span>
+          <span class="row-desc">Removes it from the player settings menu</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="hideAmbient">
+      </label>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Hide Sleep timer</span>
+          <span class="row-desc">Removes it from the player settings menu</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="hideSleepTimer">
+      </label>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Hide “Includes paid promotion”</span>
+          <span class="row-desc">Removes the label from the top of the video</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="hidePaidPromo">
+      </label>
+    </section>
+
+    <hr class="divider">
+
+    <section aria-labelledby="h-comments">
+      <h2 class="section" id="h-comments">Comments</h2>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Add “Most popular” sort</span>
+          <span class="row-desc">Adds a sort option that orders comments by likes</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="popularSort">
+      </label>
+      <div class="row">
+        <div class="text">
+          <span class="row-title" id="l-sort">Default sort</span>
+          <span class="row-desc">Used whenever comments load</span>
+        </div>
+        <div class="select" data-setting="defaultSort" aria-labelledby="l-sort"></div>
+      </div>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Hide copied comments</span>
+          <span class="row-desc">Hides bots reposting someone else’s comment</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="hideCopies">
+      </label>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Mini player while reading comments</span>
+          <span class="row-desc">Keeps the video playing beside the comments</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="miniPlayer">
+      </label>
+    </section>
+
+    <hr class="divider">
+
+    <section aria-labelledby="h-home">
+      <h2 class="section" id="h-home">Home feed</h2>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Hide Shorts</span>
+          <span class="row-desc">Removes Shorts shelves and tiles from Home</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="hideShorts">
+      </label>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Hide low-view videos</span>
+          <span class="row-desc">Only from channels you’re not subscribed to</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="hideLowViews">
+      </label>
+      <div class="row indent" id="row-min-views">
+        <div class="text">
+          <label class="row-title" for="min-views">Minimum views</label>
+          <span class="row-desc">Fewer views than this are hidden</span>
+        </div>
+        <div class="number">
+          <input id="min-views" type="text" inputmode="numeric" autocomplete="off" data-setting="minViews">
+          <span class="suffix">views</span>
+        </div>
+      </div>
+    </section>
+
+    <hr class="divider">
+
+    <section aria-labelledby="h-channels">
+      <h2 class="section" id="h-channels">Channels</h2>
+      <label class="row">
+        <span class="text">
+          <span class="row-title">Open on Videos</span>
+          <span class="row-desc">Channel links skip the Home tab</span>
+        </span>
+        <input type="checkbox" class="toggle" data-setting="channelVideos">
+      </label>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <svg class="check" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="caption grow" id="status">Saved automatically. Kept across restarts and Chrome updates.</span>
+    <button type="button" class="link" id="reset">Reset</button>
+  </footer>
+
+  <script src="../src/settings.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
