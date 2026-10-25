@@ -31,6 +31,10 @@ Settings are saved instantly in `chrome.storage.sync`, so they survive browser r
 
 To get a zip for sharing: `npm run package` → `dist/tube-tweaks-<version>.zip`.
 
+## Chrome Web Store
+
+Listing copy, privacy answers, store images and the publishing steps are in [`store/`](store/README.md). Privacy policy: [PRIVACY.md](PRIVACY.md).
+
 ## How it works
 
 - `src/content.js` (isolated world) reads settings, sets attributes on `<html>` that `src/content.css` keys off, and handles the DOM features (cinema mode, Home filtering, comment sorting, mini player, the 2K label in the quality menu).
