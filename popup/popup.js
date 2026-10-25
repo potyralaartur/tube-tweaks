@@ -30,7 +30,12 @@
       status.textContent = 'Saved';
       clearTimeout(statusTimer);
       statusTimer = setTimeout(() => { status.textContent = statusText; }, 1200);
-    }, () => {});
+    }, async () => {
+      // Not stored (e.g. Chrome's write limit): say so and show what is actually saved.
+      clearTimeout(statusTimer);
+      status.textContent = 'Couldn’t save. Try again in a moment.';
+      try { settings = await load(); render(); } catch {}
+    });
     return saving;
   }
 
