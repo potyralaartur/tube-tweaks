@@ -3,7 +3,7 @@
   "name": "Tube Tweaks",
   "version": "1.0.0",
   "description": "Tune YouTube: preferred quality, instant theater view, Most popular comment sort, a mini player and a Home feed without Shorts.",
-  "homepage_url": "https://github.com/potyralaartur/tube-tweaks",
+  "homepage_url": "https://github.com/ptrl-design/tube-tweaks",
   "minimum_chrome_version": "111",
   "icons": {
     "16": "icons/icon16.png",

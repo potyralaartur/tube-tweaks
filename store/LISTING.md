@@ -60,8 +60,8 @@ Tube Tweaks is an independent project and is not affiliated with, endorsed by or
 
 | Field | Value |
 | --- | --- |
-| Homepage URL | https://github.com/potyralaartur/tube-tweaks |
-| Support URL | https://github.com/potyralaartur/tube-tweaks/issues |
+| Homepage URL | https://github.com/ptrl-design/tube-tweaks |
+| Support URL | https://github.com/ptrl-design/tube-tweaks/issues |
 | Mature content | Off |
 
 ## Privacy practices tab
@@ -94,7 +94,7 @@ Leave the rest unticked: personally identifiable information, health, financial 
 - [x] I do not use or transfer user data for purposes that are unrelated to my item's single purpose.
 - [x] I do not use or transfer user data to determine creditworthiness or for lending purposes.
 
-**Privacy policy URL:** https://github.com/potyralaartur/tube-tweaks/blob/main/PRIVACY.md (works once `PRIVACY.md` is on `main`).
+**Privacy policy URL:** https://github.com/ptrl-design/tube-tweaks/blob/main/PRIVACY.md.
 
 ## Distribution tab
 
