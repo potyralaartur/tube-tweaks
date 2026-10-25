@@ -23,7 +23,7 @@ To do its job the extension reads parts of the YouTube pages you visit, inside y
 This is processed on the spot and is not stored or sent anywhere.
 
 ### Your YouTube subscriptions
-When "Hide low-view videos" is on and you are signed in to YouTube, the extension asks YouTube for the list of channels you subscribe to, so it never hides videos from those channels. It keeps that list in youtube.com's local storage (`tt-subs-v1`) for up to 6 hours, then asks again.
+When "Hide low-view videos" is on and you are signed in to YouTube, the extension asks YouTube for the list of channels you subscribe to, so it never hides videos from those channels. It keeps that list in youtube.com's local storage (`tt-subs-v1`) for up to 6 hours, then asks again. The saved list is tagged with which signed-in YouTube account or channel it belongs to, so it isn't reused after you switch accounts.
 
 ### Comment order
 When "Hide copied comments" finds two identical comments that show the same posting time, it may ask YouTube for the video's "Newest" comment list (at most 15 pages) to see which one was posted first.
