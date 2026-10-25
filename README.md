@@ -1,7 +1,5 @@
 # Tube Tweaks
 
-A Chrome extension that tunes YouTube to your taste. Design: [Figma – YouTube Extension Settings UI](https://www.figma.com/design/ayNZJJ4YgFVPVNwKfy6ich).
-
 ## Features
 
 | Setting | What it does |
