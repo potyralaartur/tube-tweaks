@@ -9,13 +9,13 @@ const item = (id, channelHref, views) => `
   </ytd-rich-item-renderer>`;
 
 // Newer tile (Oct 2026): a play icon and a bare number, with the words only in aria-label.
-const lockup = (id, channelHref, views, title = `title ${id}`) => `
+const lockup = (id, channelHref, views, title = `title ${id}`, shown = views.split(' ')[0]) => `
   <ytd-rich-item-renderer id="${id}"><yt-lockup-view-model>
     <a href="/watch?v=${id}"><h3><span class="yt-core-attributed-string">${title}</span></h3></a>
     <yt-content-metadata-view-model><div class="ytContentMetadataViewModelMetadataRow">
       <a href="${channelHref}">${channelHref.slice(2)}</a>
       <span class="ytContentMetadataViewModelLeadingIcon" aria-hidden="true"><svg></svg></span>
-      <span class="ytContentMetadataViewModelMetadataText" role="text" aria-label="${views}">${views.split(' ')[0]}</span>
+      <span class="ytContentMetadataViewModelMetadataText" role="text" aria-label="${views}">${shown}</span>
       <span class="ytContentMetadataViewModelMetadataText" role="text" aria-label="8 hours ago">8 hr ago</span>
     </div></yt-content-metadata-view-model>
   </yt-lockup-view-model></ytd-rich-item-renderer>`;
@@ -29,6 +29,7 @@ export const home = `<!doctype html><html><head>${ytcfg}</head><body>
   ${item('subbed-by-id', '/channel/UCsub2', '50 views')}
   ${lockup('icon-low', '/@random', '569 views')}${lockup('icon-high', '/@random', '5,690 views')}${lockup('icon-live', '/@random', '53 watching')}
   ${lockup('review-title', '/@random', '1.2M views', 'iPhone 17 Pro review: 3 views on it')}
+  ${lockup('spelled-out', '/@random', '284 thousand views', undefined, '284K')}${lockup('spelled-out-m', '/@random', '1.2 million views', undefined, '1.2M')}
   <ytd-rich-item-renderer id="short-tile"><a href="/shorts/xyz">short</a></ytd-rich-item-renderer>
 </div></ytd-browse></ytd-app></body></html>`;
 
