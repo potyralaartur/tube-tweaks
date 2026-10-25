@@ -1,8 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
   <!-- Tube Tweaks icon, the same at every size: the popup's red toggle, switched on, with a play button
-       for the knob. 112px wide inside 8px transparent padding (store guidance for icons without a square body). -->
-  <rect x="8" y="32" width="112" height="64" rx="32" fill="#ff0033"/>
-  <circle cx="88" cy="64" r="24" fill="#fff"/>
-  <path d="M83 53 L83 75 L101 64 Z" fill="#ff0033" stroke="#ff0033" stroke-width="5" stroke-linejoin="round"/>
-  <rect x="31" y="54" width="8" height="20" rx="4" fill="#fff"/>
+       for the knob. Exported from the Figma "App icon" component (Size=New, Artur's version). -->
+  <rect y="20" width="128" height="88" rx="44" fill="#ff0033"/>
+  <rect x="48" y="28" width="72" height="72" rx="36" fill="#fff"/>
+  <path d="M74.6661 44.6577C75.8491 43.9944 77.2983 44.0222 78.4556 44.7295L105.456 61.2295C106.57 61.9107 107.25 63.1225 107.25 64.4287C107.25 65.7348 106.57 66.9467 105.456 67.6279L78.4556 84.1279C77.2984 84.8351 75.8491 84.8629 74.6661 84.1997C73.483 83.5362 72.7502 82.2851 72.7501 80.9287V47.9287C72.7501 46.5723 73.483 45.3213 74.6661 44.6577Z" fill="#ff0033"/>
 </svg>
