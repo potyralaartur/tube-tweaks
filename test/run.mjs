@@ -40,6 +40,10 @@ check('Localized view counts parsed', JSON.stringify(counts) === '[1200,1200,123
 check('Russian views are not mistaken for a live stream', VIEW_WORDS.test('120 просмотров') && !LIVE_WORDS.test('120 просмотров') && LIVE_WORDS.test('53 смотрят'));
 check('"review" is not a view count word', !VIEW_WORDS.test('iPhone 17 Pro review'));
 check('Russian "год" is a year', parseAge('1 год назад') === 31536000 && parseAge('2 години тому') === 7200);
+const more = ['5.2 lakh views', '1,2 εκ. προβολές', '1,2 mil. zhlédnutí', '1,2 mil visualizações', '1,2 B görüntüleme', '1.2B views', 'Нет просмотров', '5.2 unknownunit'].map(parseCount);
+check('More localized counts (lakh, εκ., mil./mil, Turkish B, Нет), unknown units give no answer', JSON.stringify(more) === '[520000,1200000,1200000,1200,1200,1200000000,0,null]', JSON.stringify(more));
+const ages = ['3日前', '3天前', '3일 전', 'před 2 dny', '2 napja', '2 ngày trước', '2 minggu lalu', '30 saat lalu', '3 saat önce'].map(parseAge);
+check('Comment times in more languages', JSON.stringify(ages) === '[259200,259200,259200,172800,172800,172800,1209600,30,10800]', JSON.stringify(ages));
 const errors = [];
 
 // Home feed
@@ -119,6 +123,17 @@ check('Same-time copies: the one posted first (per Newest order) stays', await w
   getComputedStyle(document.getElementById('tieA')).display !== 'none' && getComputedStyle(document.getElementById('tieB')).display === 'none'));
 check('Newest order is read only as far as needed', nextCalls.join() === 'NEWEST,P2', JSON.stringify(nextCalls));
 check('Same-time copies missing from the Newest order both stay', await w.evaluate(() => ['real1', 'real2'].every(id => getComputedStyle(document.getElementById(id)).display !== 'none')));
+// Comments loaded later are checked too (YouTube appends them before its spinner).
+await w.evaluate(() => {
+  const first = document.getElementById('c1200');
+  const late = first.cloneNode(true);
+  late.id = 'late-copy';
+  late.querySelector('#published-time-text a').setAttribute('href', '/watch?v=abc&lc=late');
+  late.querySelector('#published-time-text a').textContent = '2 minutes ago';
+  document.getElementById('cont').before(late);
+});
+await w.waitForTimeout(800);
+check('A copy loaded later is hidden too', await w.evaluate(() => getComputedStyle(document.getElementById('late-copy')).display === 'none'));
 check('The same comment shown twice is hidden once', await w.evaluate(() => getComputedStyle(document.getElementById('again')).display === 'none' && getComputedStyle(document.getElementById('c30')).display !== 'none'));
 const order = await w.evaluate(() => [...document.querySelectorAll('ytd-comments #contents > *')].filter(e => getComputedStyle(e).display !== 'none' && !/^(short|real|tie)/.test(e.id))
   .sort((a, b) => (+getComputedStyle(a).order) - (+getComputedStyle(b).order)).map(e => e.id));
@@ -198,6 +213,13 @@ await setSettings({ hideShorts: false });
 await w.waitForTimeout(800);
 check('Saving another setting leaves a hand-picked quality alone', (await w.evaluate(() => window.qualityCalls)).length === callsBeforeSave);
 await setSettings({ hideShorts: true });
+// Switching to Auto hands quality back to YouTube on the open video.
+await setSettings({ quality: 'auto' });
+await w.waitForTimeout(800);
+const autoCalls = await w.evaluate(() => window.qualityCalls);
+check('Switching to Auto releases the fixed quality', JSON.stringify(autoCalls.at(-1)?.slice(0, 2)) === '["auto","auto"]', JSON.stringify(autoCalls.at(-1)));
+await setSettings({ quality: 'hd1440' });
+await w.waitForTimeout(800);
 
 const menuShown = () => w.evaluate(() => [...document.querySelectorAll('.ytp-settings-menu .ytp-menuitem[id]')]
   .filter(e => getComputedStyle(e).display !== 'none').map(e => e.id));
