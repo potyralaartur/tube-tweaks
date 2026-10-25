@@ -55,13 +55,13 @@
   if (cinemaFlag && isWatch()) setCinemaPending(true);
 
   // Once a video has reached theater view, the user is free to leave it (button or "t").
-  let cinemaVid = null, cinemaDone = null, cinemaTries = 0, cinemaLastClick = 0, cinemaReachedAt = 0, lastUserInput = 0;
-  for (const type of ['pointerdown', 'keydown']) document.addEventListener(type, e => { if (e.isTrusted) lastUserInput = Date.now(); }, true);
+  let cinemaNoButton = null, cinemaVid = null, cinemaDone = null, cinemaTries = 0, cinemaLastClick = 0, cinemaReachedAt = 0, lastUserInput = 0;
+  for (const type of ['pointerdown', 'mousedown', 'click', 'keydown']) document.addEventListener(type, e => { if (e.isTrusted) lastUserInput = Date.now(); }, true);
   function enforceCinema() {
     if (!(ready ? S.cinemaMode : cinemaFlag) || !isWatch()) return;
     const vid = videoId();
     if (cinemaVid !== vid) { cinemaVid = vid; cinemaTries = 0; }
-    if (cinemaDone === vid) return;
+    if (cinemaDone === vid || cinemaNoButton === vid) return;
     const flexy = document.querySelector('ytd-watch-flexy');
     if (!flexy || flexy.hasAttribute('hidden')) return;
     if (flexy.hasAttribute('theater') || flexy.hasAttribute('fullscreen') || document.fullscreenElement) {
@@ -76,11 +76,13 @@
     if (!btn) return;
     // Narrow windows use a single-column layout with no theater button: nothing to switch, so
     // don't keep the page hidden. Widening the window brings the button back and this runs again.
-    if (getComputedStyle(btn).display === 'none') { setCinemaPending(false); return; }
+    if (getComputedStyle(btn).display === 'none') { cinemaNoButton = vid; setCinemaPending(false); return; }
     cinemaTries++; cinemaLastClick = Date.now();
     btn.click();
     setTimeout(enforceCinema, 320); // retry if the click didn't take (player still wiring up)
   }
+  window.addEventListener('resize', () => { if (cinemaNoButton) { cinemaNoButton = null; schedule(); } });
+
   // YouTube announces its own starting state on load (enabled:false, since it no longer keeps
   // theater across sessions). A click made just before that is lost, so go again right after.
   // Leaving theater after it was reached counts as the user's choice only with a click or key press.
@@ -184,6 +186,7 @@
 
   // `clicked` is the YouTube option the user picked, when that is what turned this off.
   function setPopular(on, clicked) {
+    if (on !== popularActive) commentsVersion++;
     popularActive = on;
     root.toggleAttribute('tt-popular-active', on);
     const mine = document.querySelector('ytd-comments #sort-menu .tt-sort-item');
@@ -230,7 +233,7 @@
     if (desc && desc !== title) setOwnText(desc, POPULAR_DESC);
   }
 
-  function makeSortItem(menu, listbox) {
+  function makeSortItem(listbox) {
     const template = nativeItems(listbox)[0];
     let el;
     if (template && textLeaves(template).length) {
@@ -310,7 +313,7 @@
 
     let mine = listbox.querySelector('.tt-sort-item');
     if (S.popularSort && !mine) {
-      mine = makeSortItem(menu, listbox);
+      mine = makeSortItem(listbox);
       listbox.appendChild(mine);
       if (popularActive) setPopular(true);
     }
@@ -335,8 +338,22 @@
     return fromAria ?? parseCount(el.textContent) ?? 0;
   }
 
+  // Comment passes are skipped while the list is the same as last time (same container, count and
+  // ends; loading more or re-sorting replaces them). Anything else that changes their result bumps
+  // commentsVersion: settings, the Newest order, navigation, Most popular on/off.
+  let commentsVersion = 0;
+  const commentsSeen = {};
+  function commentsUnchanged(pass) {
+    const c = isWatch() ? document.querySelector('ytd-comments ytd-item-section-renderer #contents') : null;
+    const sig = [c, c && c.childElementCount, c && c.firstElementChild, c && c.lastElementChild, commentsVersion];
+    const last = commentsSeen[pass];
+    commentsSeen[pass] = sig;
+    return !!last && sig.every((v, i) => v === last[i]);
+  }
+
   function sortComments() {
     if (!popularActive || !isWatch()) return;
+    if (commentsUnchanged('sort')) return;
     const contents = document.querySelector('ytd-comments ytd-item-section-renderer #contents');
     if (!contents) return;
     const threads = [];
@@ -370,10 +387,11 @@
       if (vid !== videoId()) return;
       if (failed) {
         // Not read (header data not ready yet, or the request failed): ask again a bit later.
-        if (orderRetries++ < 3) setTimeout(() => { if (videoId() === vid) { orderAsked = new Set(); schedule(); } }, 5000);
+        if (orderRetries++ < 3) setTimeout(() => { if (videoId() === vid) { orderAsked = new Set(); commentsVersion++; schedule(); } }, 5000);
         return;
       }
       newest = { vid, index: new Map(ids.map((id, i) => [id, i])), readAt };
+      commentsVersion++;
       schedule();
     } catch {}
   });
@@ -397,7 +415,8 @@
     if (unseen.length === 1) {
       // A comment young enough to have been posted after the read may be the newest, not the
       // oldest: read the list again from the start (once per comment).
-      if (unseen[0].age >= 0 && unseen[0].age * 1000 < Date.now() - newest.readAt + 60000) { askOrder(items.map(i => i.id), true); return null; }
+      // An unknown age (a language whose times aren't parsed) could be either, so it's re-read too.
+      if (unseen[0].age < 0 || unseen[0].age * 1000 < Date.now() - newest.readAt + 60000) { askOrder(items.map(i => i.id), true); return null; }
       return unseen[0];
     }
     if (unseen.length > 1) return null;
@@ -418,6 +437,7 @@
   }
 
   function markCopies() {
+    if (commentsUnchanged('copies')) return;
     const threads = isWatch() && S.hideCopies ? [...document.querySelectorAll('ytd-comments ytd-item-section-renderer #contents > ytd-comment-thread-renderer')] : [];
     const groups = new Map();
     const copies = new Set();
@@ -578,8 +598,15 @@
   }
   function schedule() { if (!timer) timer = setTimeout(tick, 200); }
 
-  new MutationObserver(() => {
+  // The player rewrites its time display and controls several times a second during playback;
+  // those changes alone don't need a pass (its settings menu does: badges, hidden items).
+  const inPlayerChrome = node => {
+    const el = node.nodeType === 1 ? node : node.parentElement;
+    return !!el && !!el.closest('.html5-video-player') && !el.closest('.ytp-settings-menu');
+  };
+  new MutationObserver(records => {
     if (cinemaDone !== cinemaVid || cinemaVid !== videoId()) enforceCinema(); // cheap until theater is reached
+    if (records.every(r => r.type === 'childList' && inPlayerChrome(r.target))) return;
     schedule();
   }).observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['theater'] });
 
@@ -592,6 +619,7 @@
     setMini(false);
     setPopular(false);
     commentsVid = null; // re-apply the default sort, also when coming back to the same video
+    commentsVersion++;
   });
   document.addEventListener('yt-navigate-finish', () => {
     if (!isWatch()) setCinemaPending(false);
@@ -618,6 +646,7 @@
     document.dispatchEvent(new CustomEvent('tt-settings'));
     if (!S.popularSort) setPopular(false);
     if (sortChanged) commentsVid = null; // re-apply the default sort on the open video
+    commentsVersion++;
     schedule();
   }
 
