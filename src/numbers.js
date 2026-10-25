@@ -11,6 +11,12 @@
     [/^(bn|mld|mrd|млрд|md|mr)$/i, 1e9],
   ];
 
+  const LONG_UNITS = [
+    [/^(billion|milliard|miliard|miljard|миллиард|мільярд|milyar|tỷ|bilhão|bilhões)/i, 1e9],
+    [/^(million|millón|millones|milion|miljoen|miljon|milioni|milione|milhão|milhões|миллион|мільйон|milyon|juta|triệu|millió)/i, 1e6],
+    [/^(thousand|tausend|tysiąc|tysięc|тысяч|тисяч|mila|mille|duizend|tusen|tusind|bin|ribu|nghìn|ngàn|ezer|tisíc|χιλιάδ)/i, 1e3],
+  ];
+
   function suffixMultiplier(word, text) {
     if (!word) return 1;
     const dotted = /\.$/.test(word);
@@ -26,6 +32,8 @@
     if (/^[億亿억]/.test(w)) return 1e8;
     if (/^[千천]/.test(w)) return 1e3;
     for (const [re, mult] of SUFFIXES) if (re.test(w)) return mult;
+    // Spelled-out units, as in screen-reader labels ("284 thousand views", "1,2 Millionen Aufrufe").
+    for (const [re, mult] of LONG_UNITS) if (re.test(w)) return mult;
     return 1;
   }
 

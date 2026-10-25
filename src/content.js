@@ -132,10 +132,16 @@
     const texts = item.querySelectorAll('#metadata-line span, .inline-metadata-item, .yt-content-metadata-view-model-wiz__metadata-text, .yt-content-metadata-view-model__metadata-text, .ytContentMetadataViewModelMetadataText, span.yt-core-attributed-string');
     for (const el of texts) {
       if (el.closest('h3, #video-title')) continue; // titles can contain numbers and "review"
-      // Newer tiles show a play icon and a bare number ("▷ 569"); the words are in aria-label.
-      for (const part of (el.getAttribute('aria-label') || el.textContent).split('•')) {
+      // Newer tiles show a play icon and a short count ("▷ 284K"); the words are in aria-label,
+      // with the unit spelled out ("284 thousand views"). Both are read and the larger one wins,
+      // so a unit missing from either reading can't shrink a popular video into a low-view one.
+      const aria = el.getAttribute('aria-label');
+      for (const part of (aria || el.textContent).split('•')) {
         if (LIVE_WORDS.test(part)) live = true;
-        else if (views === null && VIEW_WORDS.test(part)) views = parseCount(part);
+        else if (views === null && VIEW_WORDS.test(part)) {
+          views = parseCount(part);
+          if (aria) { const shown = parseCount(el.textContent); if (shown !== null && (views === null || shown > views)) views = shown; }
+        }
       }
     }
     return { channel, name, views, live };
