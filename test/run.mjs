@@ -221,6 +221,18 @@ const autoCalls = await w.evaluate(() => window.qualityCalls);
 check('Switching to Auto releases the fixed quality', JSON.stringify(autoCalls.at(-1)?.slice(0, 2)) === '["auto","auto"]', JSON.stringify(autoCalls.at(-1)));
 await setSettings({ quality: 'hd1440' });
 await w.waitForTimeout(800);
+// YouTube can drop the quality while its player starts, or put the video back on Auto.
+await w.evaluate(() => window.resetQualityToAuto());
+await w.waitForTimeout(1500);
+const resetCalls = await w.evaluate(() => window.qualityCalls);
+check('A quality YouTube resets to Auto is set again', JSON.stringify(resetCalls.at(-1)?.slice(0, 2)) === '["hd1440","hd1440"]' &&
+  await w.evaluate(() => document.getElementById('movie_player').getPreferredQuality() === 'hd1440'), JSON.stringify(resetCalls.slice(-2)));
+// Auto picked by hand in the player menu stays.
+await w.click('.ytp-quality-menu [data-q="auto"]');
+const callsAfterAuto = (await w.evaluate(() => window.qualityCalls)).length;
+await w.waitForTimeout(2500);
+check('Auto picked by hand in the player menu stays', (await w.evaluate(() => window.qualityCalls)).length === callsAfterAuto &&
+  await w.evaluate(() => document.getElementById('movie_player').getPreferredQuality() === 'auto'));
 
 const menuShown = () => w.evaluate(() => [...document.querySelectorAll('.ytp-settings-menu .ytp-menuitem[id]')]
   .filter(e => getComputedStyle(e).display !== 'none').map(e => e.id));

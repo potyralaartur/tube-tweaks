@@ -8,6 +8,8 @@
   let settings = null;
   let appliedKey = null;
   let forcedVid = null; // the video whose quality range this extension last fixed
+  let ownPick = null; // { vid, quality } this extension last set
+  let handPicked = null; // the video whose quality was picked by hand in the player menu
   let retryTimer = null;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -76,6 +78,21 @@
     } catch { return ''; }
   }
 
+  // Sets the quality on the player. 1080p Premium is always on: if the API does not switch to it,
+  // it is picked in the menu.
+  function setQuality(p, vid, target, key) {
+    const prem = target === 'hd1080' ? premiumEntry(p) : null;
+    forcedVid = vid;
+    ownPick = { vid, quality: target };
+    if (prem && prem.formatId) p.setPlaybackQualityRange(target, target, prem.formatId);
+    else if (typeof p.setPlaybackQualityRange === 'function') p.setPlaybackQualityRange(target, target);
+    else p.setPlaybackQuality(target);
+    if (prem) setTimeout(() => {
+      if (appliedKey !== key || p.getVideoData?.()?.video_id !== vid) return; // moved on meanwhile
+      if (!/premium/i.test(currentLabel(p))) selectInQualityMenu(label => /1080p/.test(label) && /premium/i.test(label));
+    }, 1500);
+  }
+
   // Returns true when there is nothing left to do for this video.
   function applyQuality() {
     const p = player();
@@ -97,24 +114,31 @@
     if (!target) return false;
 
     const key = vid + '|' + settings.quality;
-    if (appliedKey === key) return true;
+    if (appliedKey === key) {
+      // Already set once. YouTube can drop that while its player is still starting up, or put the
+      // video back on Auto when it rebuilds the player, so check the player's own preference.
+      if (handPicked === vid || typeof p.getPreferredQuality !== 'function') return true;
+      let pref;
+      try { pref = p.getPreferredQuality(); } catch { return true; }
+      const ours = ownPick && ownPick.vid === vid && ownPick.quality === pref;
+      // Any other fixed quality was picked by hand in the player menu.
+      if (pref === target || (pref !== 'auto' && !ours)) return true;
+    }
     appliedKey = key;
-
-    const prem = target === 'hd1080' ? premiumEntry(p) : null;
-    forcedVid = vid;
-    try {
-      if (prem && prem.formatId) p.setPlaybackQualityRange(target, target, prem.formatId);
-      else if (typeof p.setPlaybackQualityRange === 'function') p.setPlaybackQualityRange(target, target);
-      else p.setPlaybackQuality(target);
-    } catch (e) { /* the player rejects calls mid-load; the next attempt retries */ appliedKey = null; return false; }
-
-    // 1080p Premium is always on. If the API did not switch to it, pick it in the menu.
-    if (prem) setTimeout(() => {
-      if (appliedKey !== key || p.getVideoData?.()?.video_id !== vid) return; // moved on meanwhile
-      if (!/premium/i.test(currentLabel(p))) selectInQualityMenu(label => /1080p/.test(label) && /premium/i.test(label));
-    }, 1500);
+    handPicked = null;
+    try { setQuality(p, vid, target, key); }
+    catch (e) { /* the player rejects calls mid-load; the next attempt retries */ appliedKey = null; return false; }
     return true;
   }
+
+  // A quality picked in the player menu stays for the rest of the video, Auto included.
+  const onMenuPick = e => {
+    if (!e.isTrusted || (e.type === 'keydown' && e.key !== 'Enter' && e.key !== ' ')) return;
+    if (!(e.target instanceof Element) || !e.target.closest('.ytp-quality-menu .ytp-menuitem')) return;
+    handPicked = player()?.getVideoData?.()?.video_id || null;
+  };
+  document.addEventListener('click', onMenuPick, true);
+  document.addEventListener('keydown', onMenuPick, true);
 
   async function selectInQualityMenu(match) {
     const p = player();
@@ -392,7 +416,8 @@
     if (e.target instanceof HTMLVideoElement && e.target.closest('#movie_player')) scheduleQuality();
   }, true);
 
-  setInterval(() => { if (location.pathname === '/watch') updateBadge(); }, 1000);
+  // Also catches long ads and a quality YouTube reset after the attempts above ran out.
+  setInterval(() => { if (location.pathname === '/watch') { updateBadge(); applyQuality(); } }, 1000);
   readSettings();
   scheduleQuality();
 })();

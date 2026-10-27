@@ -6,7 +6,7 @@ Everything the store asks for is in this folder: listing copy and privacy answer
 
 1. **Merge to `main`.** The privacy policy link in the listing points at `PRIVACY.md` on `main`, so it has to be there before you submit.
 2. **Try the final build on live YouTube.** Load the repo unpacked (`chrome://extensions` → Developer mode → Load unpacked), check the features once, and check the new icon in the toolbar and popup. Reviewers install the extension and try it, so it should work on the day you submit.
-3. **Build the zip:** `npm run package` → `dist/tube-tweaks-1.0.0.zip`. It holds only `manifest.json`, `src/`, `popup/`, `icons/` and `assets/`.
+3. **Build the zip:** `npm run package` → `dist/tube-tweaks-1.0.1.zip`. It holds only `manifest.json`, `src/`, `popup/`, `icons/` and `assets/`.
 
 ## Developer account (one time)
 
