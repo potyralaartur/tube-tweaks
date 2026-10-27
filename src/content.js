@@ -579,6 +579,28 @@
     }
   }
 
+  // ---------- Channel tab underline ----------
+  // The underline under a channel's selected tab is one slider that YouTube sizes and places by
+  // measuring the tabs once, when they're set. Opening a channel straight on Videos from the Home
+  // feed sets them while the channel page is still hidden, so every tab measures 0 and the slider
+  // stays 0 px wide. Same arithmetic as YouTube's (tab widths plus 24 px gaps), once it's visible.
+  function fixTabUnderline() {
+    if (!S.channelVideos) return;
+    for (const group of document.querySelectorAll('ytd-browse[page-subtype="channels"]:not([hidden]) yt-tab-group-shape')) {
+      const slider = group.querySelector(':scope > .tabGroupShapeSlider');
+      const tabs = [...group.querySelectorAll('yt-tab-shape')];
+      const i = tabs.findIndex(t => t.getAttribute('aria-selected') === 'true');
+      if (!slider || i < 0) continue;
+      const width = Math.round(tabs[i].getBoundingClientRect().width);
+      if (!width) continue; // not laid out yet
+      let x = 0;
+      for (const t of tabs.slice(0, i)) x += Math.round(t.getBoundingClientRect().width) + 24;
+      if (getComputedStyle(group).direction === 'rtl') x = -x;
+      if (slider.style.width !== width + 'px') slider.style.width = width + 'px';
+      if (slider.style.transform !== `translateX(${x}px)`) slider.style.transform = `translateX(${x}px)`;
+    }
+  }
+
   // Sleep timer has no icon when YouTube's menu icons are off, and no aria-label: match its label.
   const SLEEP_LABELS = new Set(['sleep timer', 'wyłącznik czasowy']);
   function markSleepTimer() {
@@ -601,6 +623,7 @@
     updateMini();
     rewriteMenuBadges();
     markSleepTimer();
+    fixTabUnderline();
   }
   function schedule() { if (!timer) timer = setTimeout(tick, 200); }
 
