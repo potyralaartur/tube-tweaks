@@ -256,6 +256,21 @@ const landOn = async url => { await c.goto(url); await c.waitForTimeout(400); re
 check('Typed channel URL lands on Videos', await landOn('https://www.youtube.com/@Formula1') === '/@Formula1/videos');
 check('Old /channel/ and /c/ URLs land on Videos', await landOn('https://www.youtube.com/channel/UCB_qr75-ydFVKSF9Dmo6izg') === '/channel/UCB_qr75-ydFVKSF9Dmo6izg/videos' && await landOn('https://www.youtube.com/c/Formula1/') === '/c/Formula1/videos');
 check("A channel's Home tab URL is left alone", await landOn('https://www.youtube.com/@Formula1/featured') === '/@Formula1/featured');
+// Like YouTube opening a channel on Videos from the Home feed: the tabs are measured while the
+// channel page is still hidden, which leaves the underline 0 px wide.
+const underline = () => c.evaluate(() => document.querySelector('.tabGroupShapeSlider').getAttribute('style'));
+await c.evaluate(() => {
+  const tab = (title, w, selected) => `<yt-tab-shape tab-title="${title}" aria-selected="${selected}" style="display:flex;flex-shrink:0;width:${w}px;margin-right:24px">${title}</yt-tab-shape>`;
+  document.body.insertAdjacentHTML('beforeend', `<ytd-browse page-subtype="channels" hidden style="display:block"><yt-tab-group-shape style="display:block;position:relative;width:max-content">
+    <div style="display:flex">${tab('Home', 48, false)}${tab('Videos', 49, true)}${tab('Shorts', 48, false)}</div>
+    <div class="tabGroupShapeSlider" style="width: 0px; transform: translateX(24px);"></div></yt-tab-group-shape></ytd-browse>`);
+  document.querySelector('ytd-browse[page-subtype="channels"]').style.display = 'none';
+});
+await c.waitForTimeout(500);
+const whileHidden = await underline();
+await c.evaluate(() => { const b = document.querySelector('ytd-browse[page-subtype="channels"]'); b.removeAttribute('hidden'); b.style.display = 'block'; b.append(document.createElement('div')); });
+await c.waitForTimeout(500);
+check('Channel tab underline measured while hidden is fixed once shown', whileHidden === 'width: 0px; transform: translateX(24px);' && await underline() === 'width: 49px; transform: translateX(72px);', `${whileHidden} → ${await underline()}`);
 // Like YouTube: links fire 'yt-navigate' with the endpoint to open; the extension edits it in place.
 const navigate = () => c.evaluate(() => {
   const ep = (url, params) => ({ commandMetadata: { webCommandMetadata: { url, webPageType: 'WEB_PAGE_TYPE_CHANNEL' } }, browseEndpoint: { browseId: 'UCB_qr75', canonicalBaseUrl: '/@Formula1', ...(params ? { params } : {}) } });
