@@ -88,7 +88,9 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
       ${menuItem('mi-speed', 'menuitem', 'Playback speed', 'M12 1c1.44 0 2.87.28 4.21.83Z', false)}
       <div class="ytp-menuitem" role="menuitemradio"><div class="ytp-menuitem-label"><div><span>1440p60 HDR <sup class="ytp-swatch-color-white">HD</sup></span></div></div></div>
       <div class="ytp-menuitem" role="menuitemradio"><div class="ytp-menuitem-label"><div><span>1080p60 HDR <sup class="ytp-swatch-color-white">HD</sup></span></div></div></div>
-    </div></div>
+    </div><div class="ytp-panel ytp-quality-menu"><div class="ytp-panel-menu">
+      <div class="ytp-menuitem" role="menuitemradio" data-q="auto"><div class="ytp-menuitem-label">Auto</div></div>
+    </div></div></div>
   </div></div>
   <div id="columns"><div id="primary"><div id="below">
     <ytd-comments id="comments">
@@ -134,12 +136,15 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
   });
   const p = document.getElementById('movie_player');
   window.qualityCalls = [];
-  let current = 'hd720';
+  let current = 'hd720', preferred = 'auto';
   // Like YouTube's player: API events are registered by name on the element.
   const apiListeners = [];
   const domAdd = p.addEventListener.bind(p);
   p.addEventListener = (type, fn, o) => type === 'onPlaybackQualityChange' ? apiListeners.push(fn) : domAdd(type, fn, o);
-  window.setQualityFromMenu = q => { current = q; apiListeners.forEach(fn => fn(q)); };
+  window.setQualityFromMenu = q => { current = q; preferred = q; apiListeners.forEach(fn => fn(q)); };
+  document.querySelector('.ytp-quality-menu').addEventListener('click', e => window.setQualityFromMenu(e.target.closest('[data-q]').dataset.q));
+  // Like YouTube rebuilding its player: the video goes back on Auto without anyone asking.
+  window.resetQualityToAuto = () => { preferred = 'auto'; current = 'hd720'; apiListeners.forEach(fn => fn('hd720')); };
   Object.assign(p, {
     getAvailableQualityLevels: () => ['hd2160', 'hd1440', 'hd1080', 'hd720', 'auto'],
     getAvailableQualityData: () => [
@@ -147,7 +152,8 @@ body{margin:0} #player-container-outer{height:400px} #below{height:3000px}
       { quality: 'hd1080', qualityLabel: '1080p', isPlayable: true },
     ],
     getVideoData: () => ({ video_id: 'abc' }),
-    setPlaybackQualityRange: (a, b, f) => { window.qualityCalls.push([a, b, f]); current = a; apiListeners.forEach(fn => fn(a)); },
+    setPlaybackQualityRange: (a, b, f) => { window.qualityCalls.push([a, b, f]); current = a; preferred = a; apiListeners.forEach(fn => fn(a)); },
+    getPreferredQuality: () => preferred,
     getPlaybackQuality: () => current,
     getPlaybackQualityLabel: () => current === 'hd1080' ? '1080p Premium' : current,
   });

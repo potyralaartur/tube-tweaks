@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Tube Tweaks",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Tune YouTube: preferred quality, instant theater view, Most popular comment sort, a mini player and a Home feed without Shorts.",
   "homepage_url": "https://github.com/ptrl-design/tube-tweaks",
   "minimum_chrome_version": "111",

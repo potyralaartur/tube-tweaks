@@ -10,7 +10,7 @@ Upload `dist/tube-tweaks-<version>.zip` from `npm run package`. The dashboard re
 | --- | --- |
 | Name | Tube Tweaks |
 | Summary (manifest `description`, 132 characters max) | Tune YouTube: preferred quality, instant theater view, Most popular comment sort, a mini player and a Home feed without Shorts. |
-| Version | 1.0.0 |
+| Version | 1.0.1 |
 
 ## Store listing tab
 

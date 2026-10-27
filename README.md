@@ -4,7 +4,7 @@
 
 | Setting | What it does |
 | --- | --- |
-| Preferred quality | Applies your chosen quality (8K … 360p, or Auto; 2160p (4K) by default) to every video. If a video doesn't offer it, the next lower quality is used. |
+| Preferred quality | Applies your chosen quality (8K … 360p, or Auto; 2160p (4K) by default) to every video. If a video doesn't offer it, the next lower quality is used. If YouTube switches the video back to Auto on its own, the quality is set again; a quality you pick in the player menu stays for that video. |
 | 1080p Premium (always on) | Whenever 1080p is picked and the video offers **1080p Premium**, Premium is used instead. Needs a YouTube Premium account. |
 | Always use cinema mode | Opens every video in theater view right away (the default layout is never shown). Leaving theater view by hand sticks for that video. |
 | Hide Ambient mode / Hide Sleep timer | Removes these items from the player's settings (gear) menu. They're recognised by their icons, so it works in any YouTube language (with YouTube's menu icons turned off, Sleep timer is recognised by its English or Polish label). |

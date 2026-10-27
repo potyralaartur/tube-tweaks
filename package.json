@@ -1,6 +1,6 @@
 {
   "name": "tube-tweaks",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Chrome extension that tunes YouTube: preferred quality with 1080p Premium, cinema mode, comment sorting, mini player, cleaner Home.",
   "type": "module",
